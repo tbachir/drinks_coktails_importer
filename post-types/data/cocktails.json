@@ -1,0 +1,186 @@
+{
+  "cocktails": [
+    {
+      "slug": "gin-tonic",
+      "name": "Gin & Tonic",
+      "tagline": "Le classique rafraîchissant pour sublimer votre gin préféré.",
+      "description": "Ce Gin Tonic revisité met en valeur les notes herbacées et florales de Cryptonic, avec une amertume équilibrée et une finition éclatante.",
+      "drinks": ["tonic-water"],
+      "image": "https://cdn.mimeit.com/images/cocktails/1.jpg",
+      "color": "#C1D4D3",
+      "ingredients": [
+        "5 cl gin",
+        "20 cl cryptonic tonic water"
+      ],
+      "preparation": "Dans un verre rempli de glaçons, versez les ingrédients dans l'ordre puis mélangez à la cuillère. Garniture au choix."
+    },
+    {
+      "slug": "romapolitan",
+      "name": "Romapolitan",
+      "tagline": "Une revisite méditerranéenne du cosmopolitan au tonic romarin.",
+      "description": "Le gingembre s’efface légèrement derrière les notes aromatiques du romarin, relevées par une touche de citron vert.",
+      "drinks": ["tonic-romarin"],
+      "image": "https://cdn.mimeit.com/images/cocktails/2.jpg",
+      "color": "#D5CEC5",
+      "ingredients": [
+        "4,5 cl Vodka",
+        "1,5 cl liqueur d’orange",
+        "0,5 cl jus de citron vert",
+        "3 cl jus de canneberge",
+        "10 cl tonic cryptonic romarin"
+      ],
+      "preparation": "Dans un verre rempli de glaçons, versez les ingrédients dans l'ordre puis mélangez à la cuillère. Garnir d'une branche de romarin."
+    },
+    {
+      "slug": "emerald-garden",
+      "name": "Emerald Garden",
+      "tagline": "Un jardin vert luxuriant dans votre verre.",
+      "description": "Fraîcheur végétale et légèreté florale pour un cocktail visuel et aromatique.",
+      "drinks": ["tonic-romarin"],
+      "image": "https://cdn.mimeit.com/images/cocktails/3.jpg",
+      "color": "#A9D5C2",
+      "ingredients": [
+        "5 cl de gin infusé aux herbes",
+        "10 cl de Cryptonic Romarin",
+        "2 feuilles de basilic",
+        "1 quartier de concombre",
+        "Glaçons"
+      ],
+      "preparation": "Mélanger tous les ingrédients dans le verre avec des glaçons. Ajouter le drink Cryptonic, remuer doucement, et décorer selon l'inspiration botanique."
+    },
+    {
+      "slug": "jasmin",
+      "name": "Jasmin",
+      "tagline": "Douceur florale et mystère asiatique.",
+      "description": "Une caresse florale venue du lointain Orient, adoucie par un gin délicat.",
+      "drinks": ["soda-jasmin"],
+      "image": "https://cdn.mimeit.com/images/cocktails/4.jpg",
+      "color": "#F1E4E7",
+      "ingredients": [
+        "3 cl liqueur de fleur de sureau",
+        "1 cl jus de citron pressé",
+        "10 cl jasmin soda cryptonic"
+      ],
+      "preparation": "Dans un verre rempli de glaçons, versez les ingrédients dans l'ordre puis mélangez à la cuillère. Garnir d'une feuille de menthe."
+    },
+    {
+      "slug": "paloma",
+      "name": "Paloma",
+      "tagline": "Un grand classique mexicain revisité au soda pamplemousse.",
+      "description": "Vivacité du pamplemousse, complexité du gin, et fraîcheur végétale se rencontrent.",
+      "drinks": ["soda-pamplemousse"],
+      "image": "https://cdn.mimeit.com/images/cocktails/5.jpg",
+      "color": "#F4D9D4",
+      "ingredients": [
+        "5 cl Tequila",
+        "1 cl jus de citron pressé",
+        "10 cl pamplemousse soda cryptonic"
+      ],
+      "preparation": "Dans un verre rempli de glaçons, versez les ingrédients dans l'ordre puis mélangez à la cuillère. Garnir d'une tranche de pamplemousse."
+    },
+    {
+      "slug": "concombre-collins",
+      "name": "Concombre Collins",
+      "tagline": "La fraîcheur du concombre dans un long drink végétal.",
+      "description": "Un cocktail effervescent qui explose de fraîcheur, idéal pour les débuts de soirée.",
+      "drinks": ["tonic-concombre"],
+      "image": "https://cdn.mimeit.com/images/cocktails/6.jpg",
+      "color": "#D6EAD8",
+      "ingredients": [
+        "5 cl gin",
+        "2,5 cl jus de citron pressé",
+        "1,5 cl sirop de sucre",
+        "10 cl tonic cryptonic concombre"
+      ],
+      "preparation": "Dans un verre rempli de glaçons, versez les ingrédients dans l'ordre puis mélangez à la cuillère. Garnir d'une tranche de concombre."
+    },
+    {
+      "slug": "citrus-twist",
+      "name": "Citrus Twist",
+      "tagline": "Un éclat agrume à chaque gorgée.",
+      "description": "Explosion de zestes de citron, yuzu et mandarine, mêlés au gin et à l’élixir citrus.",
+      "drinks": ["tonic-romarin"],
+      "image": "https://cdn.mimeit.com/images/cocktails/7.jpg",
+      "color": "#FCE6B4",
+      "ingredients": [
+        "5 cl de gin",
+        "10 cl de Cryptonic Romarin",
+        "1 cl de jus de yuzu",
+        "Zeste d’orange et de citron",
+        "Glaçons"
+      ],
+      "preparation": "Verser le gin et le jus de yuzu dans un verre rempli de glaçons. Ajouter le tonic Romarin. Mélanger doucement et agrémenter de zestes."
+    },
+    {
+      "slug": "gin-noir",
+      "name": "Gin Noir",
+      "tagline": "Le gin dans l’ombre, relevé de baies noires.",
+      "description": "Un cocktail profond, sec, relevé par une touche végétale sombre et un tonic intense.",
+      "drinks": ["tonic-water"],
+      "image": "https://cdn.mimeit.com/images/cocktails/8.jpg",
+      "color": "#B0B0B0",
+      "ingredients": [
+        "5 cl de gin sec",
+        "10 cl de Cryptonic Classic",
+        "1 cl de sirop de sureau noir",
+        "Glaçons",
+        "Mûres (facultatif)"
+      ],
+      "preparation": "Dans un verre, verser le gin et le sirop. Compléter avec Cryptonic Classic. Mélanger doucement. Servir très frais."
+    },
+    {
+      "slug": "rose-sauvage",
+      "name": "Rose Sauvage",
+      "tagline": "Une fleur fragile dans un verre de nuit.",
+      "description": "Gin floral, tonic rosé et parfum subtil de rose pour une expérience romantique et botanique.",
+      "drinks": ["soda-jasmin"],
+      "image": "https://cdn.mimeit.com/images/cocktails/9.jpg",
+      "color": "#EEC3D3",
+      "ingredients": [
+        "4 cl de gin à la rose",
+        "10 cl de Cryptonic Jasmin",
+        "1 cl de sirop de rose",
+        "Glaçons"
+      ],
+      "preparation": "Verser tous les ingrédients dans un verre à cocktail. Remuer brièvement. Ajouter une touche florale si souhaité."
+    },
+    {
+      "slug": "tonka-tonic",
+      "name": "Tonka Tonic",
+      "tagline": "L’amertume maîtrisée, la douceur mystique.",
+      "description": "Mariage du gin, de la fève tonka et du tonic pour un cocktail envoûtant, surprenant et complexe.",
+      "drinks": ["tonic-water"],
+      "image": "https://cdn.mimeit.com/images/cocktails/10.jpg",
+      "color": "#D6C8B1",
+      "ingredients": [
+        "5 cl de gin",
+        "10 cl de Cryptonic Tonic Water",
+        "Sirop infusé à la fève tonka",
+        "Glaçons"
+      ],
+      "preparation": "Préparer un sirop de tonka infusée. Mélanger au gin sur glace, ajouter Cryptonic Tonic et servir avec élégance."
+    },
+    {
+      "slug": "mule",
+      "name": "Mule",
+      "tagline": "La rencontre épicée entre ginger beer et spiritueux, version internationale.",
+      "description": "La Mule est un classique intemporel, combinant la chaleur du gingembre à la vivacité du citron. Déclinée selon le spiritueux utilisé (vodka, gin, tequila, rhum, cognac), elle séduit par sa fraîcheur relevée.",
+      "drinks": ["ginger-beer"],
+      "image": "https://cdn.mimeit.com/images/cocktails/11.jpg",
+      "color": "#D3BDB5",
+      "ingredients": [
+        "5 cl Spiritueux",
+        "1 cl jus de citron pressé",
+        "20 cl Ginger beer cryptonic"
+      ],
+      "preparation": "Dans un verre rempli de glaçons, versez les ingrédients dans l'ordre puis mélangez à la cuillère. Garnir d'une tête de menthe et d'une tranche de citron.",
+      "variants": [
+        "London Mule = Gin",
+        "Moscow Mule = Vodka",
+        "French Mule = Cognac",
+        "Mexican Mule = Tequila",
+        "Caribbean Mule = Rhum"
+      ]
+    }
+  ]
+}

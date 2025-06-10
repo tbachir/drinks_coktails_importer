@@ -1,0 +1,121 @@
+{
+  "drinks": [
+    {
+      "slug": "tonic-water",
+      "name": "Tonic Water",
+      "type": "Tonic",
+      "volume_ml": 200,
+      "tagline": "Un grand classique à l’allure alchimique",
+      "description": "La base parfaite pour tous les cocktails. Goût subtil et équilibré, idéal pour rehausser les saveurs. Infusé de quinine naturelle, faible en calories et sans conservateurs.",
+      "description_complete": "Notre Tonic Water est la base parfaite pour tous les cocktails.\nAvec son goût subtil et équilibré, il est idéal pour rehausser les\n\nsaveurs de vos boissons préférées. \n\nFabriqué avec des ingrédients de qualité supérieure, notre\nTonic Water est infusé avec de la quinine naturelle pour un\n\ngoût authentique et rafraîchissant.\nNotre Tonic Water est également faible en calories et sans\n\nconservateurs, ce qui en fait une alternative saine aux sodas\nsucrés. \n\nEssayez notre Tonic Water dès aujourd'hui et découvrez ce\nqui en fait la boisson préférée des amateurs de cocktails.",
+      "tasting_notes": ["Amer", "Pétillant", "Rafraîchissant"],
+      "characteristics": [
+        "Quinine naturelle",
+        "Faible en calories",
+        "Sans conservateurs",
+        "200 ml"
+      ],
+      "note_speciale": "Type de gin idéal :<br>herbacés<br>citronné<br>floral",
+      "color": "#ddd49a",
+      "image": "https://cdn.mimeit.com/images/products/Tonic Water.png",
+      "image_square": "https://cdn.mimeit.com/images/products/Tonic Water_square.png",
+      "featured_cocktail_slug": "gin-tonic",
+      "cocktails": ["gin-tonic", "gin-noir", "tonka-tonic"]
+    },
+    {
+      "slug": "tonic-concombre",
+      "name": "Tonic Concombre",
+      "type": "Tonic",
+      "volume_ml": 200,
+      "tagline": "Le concombre ici n’est pas un goût, c’est un frisson.",
+      "description": "Tonic au concombre rafraîchissant et innovant, à base d'extraits de concombre frais. Apporte une touche de fraîcheur et de sophistication à vos cocktails.",
+      "description_complete": "Découvrez notre tonic au concombre, une boisson rafraîchissante\net innovante qui apporte une touche de fraîcheur à vos cocktails.\n\nFabriqué à partir d'ingrédients de première qualité et d'extraits de\nconcombre frais, notre tonic est le choix idéal pour les amateurs de\n\nsaveurs originales et raffinées.\n\nQue vous cherchiez à ajouter une touche de tonic à votre gin\npréféré ou à créer un cocktail sur mesure, notre tonic au\n\nconcombre est la boisson idéale. Son goût unique et rafraîchissant\nest sûr de plaire à tous, tandis que son arôme subtil de concombre\n\najoute une touche de sophistication à votre boisson préférée.\n\nCommandez dès maintenant notre tonic au concombre et\ndécouvrez la différence qu'une boisson de qualité peut faire dans\n\nvotre expérience de dégustation. Essayez-le maintenant et laissez-\nvous séduire par son goût unique et délicat !",
+      "tasting_notes": ["Léger", "Végétal", "Frais"],
+      "characteristics": [
+        "Extrait de concombre frais",
+        "Faible en calories",
+        "Sans conservateurs",
+        "200 ml"
+      ],
+      "note_speciale": "Type de gin idéal :<br>herbacés<br>citronné<br>sec",
+      "color": "#9cbe93",
+      "image": "https://cdn.mimeit.com/images/products/Tonic Concombre.png",
+      "image_square": "https://cdn.mimeit.com/images/products/Tonic Concombre_square.png",
+      "featured_cocktail_slug": "concombre-collins",
+      "cocktails": ["concombre-collins", "mule"]
+    },
+    {
+      "slug": "tonic-romarin",
+      "name": "Tonic Romarin",
+      "type": "Tonic",
+      "volume_ml": 200,
+      "tagline": "Le romarin résonne dans le tonic comme une incantation.",
+      "description": "Fusion audacieuse du tonic classique et du romarin. Notes herbacées et méditerranéennes, parfait pour découvrir de nouvelles saveurs.",
+      "description_complete": "Notre Tonic Romarin est une fusion audacieuse de saveurs,\nmélangeant notre tonic classique avec des notes de romarin pour\n\nun goût subtilement herbacé. \n\nFabriqué à partir d'ingrédients de qualité et d'arôme naturel de\nromarin frais, notre tonic est le choix parfait pour les amateurs de\n\nsaveurs uniques et raffinées.\n\nNotre Tonic Romarin est idéal pour ceux qui cherchent à découvrir\nde nouvelles saveurs dans leur tonic. Avec son goût audacieux\n\nmais équilibré, il se marie parfaitement avec des spiritueux\ncomplexes tels que le gin ou la tequila, ou peut être dégusté seul\n\npour une expérience de boisson rafraîchissante.\nEssayez notre Tonic Romarin dès aujourd'hui et découvrez ce qui \nen fait une boisson incontournable pour ceux qui cherchent à\nexplorer de nouvelles saveurs dans leur tonic.",
+      "tasting_notes": ["Parfumé", "Méditerranéen", "Aromatique"],
+      "characteristics": [
+        "Arôme naturel de romarin",
+        "Faible en calories",
+        "Sans conservateurs",
+        "200 ml"
+      ],
+      "note_speciale": "Type de gin idéal :<br>herbacés<br>citronné",
+      "color": "#4bb090",
+      "image": "https://cdn.mimeit.com/images/products/Tonic Romarin.png",
+      "image_square": "https://cdn.mimeit.com/images/products/Tonic Romarin_square.png",
+      "featured_cocktail_slug": "romapolitan",
+      "cocktails": ["emerald-garden", "romapolitan", "citrus-twist"]
+    },
+    {
+      "slug": "soda-jasmin",
+      "name": "Jasmin Soda",
+      "type": "Soda",
+      "volume_ml": 200,
+      "tagline": "Jasmin, fraîcheur et silence.",
+      "description": "Boisson douce et florale, parfaite pour se rafraîchir. Faible en calories, sans conservateurs. Peut être appréciée seule ou en cocktail.",
+      "description_complete": "Notre soda Jasmin est une boisson douce et florale, parfaite pour\nse rafraîchir pendant les journées chaudes d'été (et toutes les\n\nautres).\n\nAvec sa saveur subtile et son parfum floral, notre Soda Jasmin peut\nêtre apprécié seul pour une expérience de boisson rafraîchissante\n\nou mélangé avec des spiritueux clairs tels que la vodka pour un\ncocktail unique et délicat.\n\nNotre Soda Jasmin est faible en calories et sans conservateurs, ce\nqui en fait une alternative saine aux sodas sucrés. Ce soda est\n\nparfait pour ceux qui cherchent une boisson légèrement sucrée,\nmais pas trop non plus. \n\nEssayez notre Soda Jasmin dès aujourd'hui et découvrez ce qui en\nfait une boisson incontournable pour les amateurs de saveurs\n\nflorales et de boissons rafraîchissantes.",
+      "tasting_notes": ["Délicat", "Doux", "Floral"],
+      "characteristics": ["Faible en calories", "Sans conservateurs", "200 ml"],
+      "note_speciale": "Idéal sur glace<br>ou<br>en cocktails",
+      "color": "#f59eb5",
+      "image": "https://cdn.mimeit.com/images/products/Soda Jasmin.png",
+      "image_square": "https://cdn.mimeit.com/images/products/Soda Jasmin_square.png",
+      "featured_cocktail_slug": "jasmin",
+      "cocktails": ["jasmin", "rose-sauvage"]
+    },
+    {
+      "slug": "soda-pamplemousse",
+      "name": "Pamplemousse Soda",
+      "type": "Soda",
+      "volume_ml": 200,
+      "tagline": "Un éclat rose au cœur d’un orage d’agrumes.",
+      "description": "Explosion de saveurs acidulées, avec une touche sucrée et un goût équilibré. Faible en calories, sans conservateurs.",
+      "description_complete": "Notre soda Pamplemousse est une explosion de saveurs acidulées,\navec une touche sucrée pour un goût équilibré.\n\nIl est parfait pour ceux qui cherchent une boisson légèrement\nacidulée, mais pas trop sucrée. Rafraîchissant, notre Soda\n\nPamplemousse peut être dégusté seul pour une expérience de\nboisson désaltérante ou mélangé avec des spiritueux clairs tels\n\nque le gin pour un cocktail unique et rafraîchissant.\n\nNotre soda est faible en calories et sans conservateurs, ce qui en\nfait une alternative saine aux sodas sucrés.\n\nEssayez notre soda au pamplemousse artisanal dès maintenant et\nlaissez-vous séduire par son goût authentique et son caractère\n\nfrais et pétillant !",
+      "tasting_notes": ["Frais", "Pétillant", "Rafraîchissant"],
+      "characteristics": ["Faible en calories", "Sans conservateurs", "200 ml"],
+      "note_speciale": "Idéal sur glace<br>ou<br>en cocktails",
+      "color": "#f27778",
+      "image": "https://cdn.mimeit.com/images/products/Soda Pamplemousse.png",
+      "image_square": "https://cdn.mimeit.com/images/products/Soda Pamplemousse_square.png",
+      "featured_cocktail_slug": "paloma",
+      "cocktails": ["paloma"]
+    },
+    {
+      "slug": "ginger-beer",
+      "name": "Ginger Beer",
+      "type": "Soda",
+      "volume_ml": 200,
+      "tagline": "Un feu doux, chaud et vibrant.",
+      "description": "Boisson rafraîchissante et épicée au gingembre frais, brassée en Alsace. Piquante et réconfortante, idéale seule ou en cocktail.",
+      "description_complete": "Découvrez la Ginger Beer Cryptonic, une boisson rafraîchissante et\népicée qui éveillera vos papilles avec son goût unique. Fabriquée\n\nlocalement dans notre brasserie en Alsace, notre ginger beer est le\nmariage parfait entre le gingembre frais et des arômes subtils. \n\nSon piquant naturel et sa saveur inimitable en font une boisson\nidéale pour se désaltérer et se réconforter. \n\nOffrez-vous une parenthèse de plaisir avec notre ginger beer et\ninvitez un morceau de l'Alsace dans votre verre. À consommer\n\navec modération pour un voyage gustatif garanti !",
+      "tasting_notes": ["Piquante", "Réconfortante", "Épicée"],
+      "characteristics": ["Gingembre frais", "Sans conservateurs", "200 ml"],
+      "note_speciale": "Idéal sur glace<br>ou<br>en cocktails",
+      "color": "#a36f2a",
+      "image": "https://cdn.mimeit.com/images/products/Ginger Beer.png",
+      "image_square": "https://cdn.mimeit.com/images/products/Ginger Beer_square.png",
+      "featured_cocktail_slug": "mule",
+      "cocktails": ["mule"]
+    }
+  ]
+}

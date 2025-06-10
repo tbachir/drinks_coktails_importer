@@ -2,41 +2,102 @@
 
 /**
  * Plugin Name: Drinks & Cocktails - Import & CPT
+ * Plugin URI: https://drinks_cocktails_importer.com
  * Description: Crée les CPT Drink/Cocktail, leurs metas, permet l’import JSON (relations par slugs), téléchargement différé des images, et expose tout dans l’API REST. Logging via error_log (WordPress).
- * Version: 2.1
- * Author: OpenAI / Tarek Bachir
+ * Version: 1.0.0
+ * Author: Tarek Bachir
+ * Text Domain: drinks-cocktails-import-cpt
+ * Domain Path: /languages
  */
 
-if (! defined('ABSPATH')) exit;
+// Sécurité : empêcher l'accès direct
+if (!defined('ABSPATH')) {
+    exit;
+}
 
+// Constantes du plugin
+define('DCI_VERSION', '1.0.0');
+define('DCI_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('DCI_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+/**
+ * Classe principale du plugin
+ */
 class DCI_Plugin
 {
 
+    /**
+     * Instance unique du plugin
+     */
+    private static $instance = null;
+    private $cocktails = null;
+    private $drinks = null;
+    private $editableContents = null;
+
+    /**
+     * Obtenir l'instance unique
+     */
+    public static function get_instance()
+    {
+        if (null === self::$instance) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    /**
+     * Constructeur
+     */
     public function __construct()
     {
-        add_action('init', [$this, 'register_post_types']);
-        add_action('init', [$this, 'register_meta']);
+        $this->load_dependencies();
+        $this->cocktails = new Cocktails();
+        $this->drinks = new Drinks();
+        $this->editableContents = new Editable_Content();
+        $this->init_hooks();
+    }
+
+    private function load_dependencies() {
+        $this->load_post_types();
+    }
+
+    /**
+     * Initialiser les hooks WordPress
+     */
+    private function init_hooks()
+    {
+        // Styles admin
+        //add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_styles']);
+        //add_action('init', [$this, 'register_post_types']);
+        //add_action('init', [$this, 'register_meta']);
         add_action('admin_menu', [$this, 'register_admin_page']);
         add_action('admin_post_dci_import_json', [$this, 'handle_import']);
         add_action('add_meta_boxes', [$this, 'add_image_downloader_metabox']);
-        add_action('rest_api_init', function () {
-            register_rest_field('drink', 'image_square_url', [
-                'get_callback' => function ($object) {
-                    $id = get_post_meta($object['id'], 'image_square_id', true);
-                    return $id ? wp_get_attachment_url($id) : null;
-                },
-                'schema' => [
-                    'description' => 'URL de l’image carrée',
-                    'type'        => 'string',
-                    'context'     => ['view', 'edit'],
-                ],
-            ]);
-        });
         add_action('admin_post_dci_download_images_now', [$this, 'handle_direct_image_download']);
+        // Activation/Désactivation
+        register_activation_hook(__FILE__, [$this, 'activate']);
+        register_deactivation_hook(__FILE__, [$this, 'deactivate']);
+    }
+
+
+    /**
+     * Charger les post types
+     */
+    public function load_post_types()
+    {
+        // Charger automatiquement tous les fichiers dans post-types/
+        $post_types_dir = DCI_PLUGIN_DIR . 'post-types/';
+
+        if (is_dir($post_types_dir)) {
+            foreach (glob($post_types_dir . '*.php') as $file) {
+                require_once $file;
+            }
+        }
     }
 
     // LOG via error_log WP natif
-    private function dci_log($message, $type = 'debug') {
+    private function dci_log($message, $type = 'debug')
+    {
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('[DCI_Plugin][' . $type . '] ' . $message);
         }
@@ -81,76 +142,47 @@ class DCI_Plugin
         wp_redirect($redir);
         exit;
     }
-
-    public function register_post_types()
+    /**
+     * Charger les styles admin
+     */
+    public function enqueue_admin_styles($hook)
     {
-        register_post_type('drink', [
-            'label' => 'Drinks',
-            'public' => true,
-            'show_in_rest' => true,
-            'show_in_menu' => true,
-            'supports' => ['title', 'editor', 'thumbnail', 'custom-fields'],
-            'has_archive' => true,
-            'rewrite' => ['slug' => 'drinks'],
-        ]);
-        register_post_type('cocktail', [
-            'label' => 'Cocktails',
-            'public' => true,
-            'show_in_rest' => true,
-            'show_in_menu' => true,
-            'supports' => ['title', 'editor', 'thumbnail', 'custom-fields'],
-            'has_archive' => true,
-            'rewrite' => ['slug' => 'cocktails'],
-        ]);
+        // Charger uniquement sur nos pages
+        /*$screen = get_current_screen();
+        $our_post_types = ['editable-content', 'drinks', 'cocktails'];
+
+        if ($screen && in_array($screen->post_type, $our_post_types)) {
+            wp_enqueue_style(
+                'DCI-admin',
+                DCI_PLUGIN_URL . 'assets/admin.css',
+                [],
+                DCI_VERSION
+            );
+        }*/
     }
 
-    public function register_meta()
+    /**
+     * Activation du plugin
+     */
+    public function activate()
     {
-        $drink_meta = [
-            'type'                => 'string',
-            'volume_ml'           => 'number',
-            'tagline'             => 'string',
-            'description_complete' => 'string',
-            'tasting_notes'       => 'array',
-            'characteristics'     => 'array',
-            'note_speciale'       => 'string',
-            'color'               => 'string',
-            'image'               => 'string',
-            'image_square'        => 'string',
-            'image_square_id'     => 'number',
-            'featured_cocktail_id' => 'number',
-            'featured_cocktail_slug' => 'string',
-            'cocktails'           => 'array',
-            'cocktail_slugs'      => 'array',
-        ];
-        $cocktail_meta = [
-            'tagline'      => 'string',
-            'color'        => 'string',
-            'ingredients'  => 'array',
-            'preparation'  => 'string',
-            'image'        => 'string',
-            'drinks'       => 'array',
-            'drink_slugs'  => 'array',
-            'variants'     => 'array',
-        ];
-        foreach ($drink_meta as $key => $type) {
-            register_post_meta('drink', $key, [
-                'show_in_rest' => [
-                    'schema' => ['type' => $type]
-                ],
-                'single' => true,
-                'type' => $type === 'array' ? 'string' : $type
-            ]);
-        }
-        foreach ($cocktail_meta as $key => $type) {
-            register_post_meta('cocktail', $key, [
-                'show_in_rest' => [
-                    'schema' => ['type' => $type]
-                ],
-                'single' => true,
-                'type' => $type === 'array' ? 'string' : $type
-            ]);
-        }
+        // Charger les post types
+        $this->load_post_types();
+
+        // Rafraîchir les permaliens
+        flush_rewrite_rules();
+
+        // Version en base de données
+        update_option('DCI_version', DCI_VERSION);
+    }
+
+    /**
+     * Désactivation du plugin
+     */
+    public function deactivate()
+    {
+        // Nettoyer les permaliens
+        flush_rewrite_rules();
     }
 
     public function register_admin_page()
@@ -166,7 +198,7 @@ class DCI_Plugin
 
     public function import_page_html()
     {
-        ?>
+?>
         <div class="wrap">
             <h1>Importer Drinks & Cocktails (JSON)</h1>
             <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" enctype="multipart/form-data">
@@ -323,7 +355,7 @@ class DCI_Plugin
                 } elseif (isset($_GET['dci_img']) && $_GET['dci_img'] === 'fail') {
                     echo '<div class="notice notice-error"><p>Erreur lors du téléchargement d\'au moins une image. Consulte le log.</p></div>';
                 }
-                ?>
+        ?>
                 <p>
                     <strong>Image principale :</strong><br>
                     <?php echo $image_url ? esc_html($image_url) : '<em>aucune</em>'; ?><br>
@@ -346,7 +378,7 @@ class DCI_Plugin
                     <input type="hidden" name="post_id" value="<?php echo esc_attr($post->ID); ?>" />
                     <input type="submit" class="button" value="Télécharger les images maintenant" <?php if ($has_thumb && ($type !== 'drink' || $square_id)) echo 'disabled style="opacity:0.5;"'; ?> />
                 </form>
-                <?php
+<?php
             }, $type);
         }
     }
@@ -406,4 +438,5 @@ class DCI_Plugin
     }
 }
 
+// Initialiser le plugin
 new DCI_Plugin();
