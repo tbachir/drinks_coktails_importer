@@ -1,0 +1,145 @@
+/**
+ * Styles globaux pour l'administration Drinks & Cocktails
+ */
+
+/* Post types icons */
+.dashicons-drinks:before {
+    content: "\f306";
+}
+
+/* Meta boxes */
+.dci-repeater-item {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.dci-repeater-item input {
+    flex: 1;
+}
+
+.dci-repeater-item .button {
+    flex-shrink: 0;
+}
+
+/* Admin notices */
+.dci-admin-notice {
+    padding: 12px;
+}
+
+/* Import page specific styles */
+.dci-import-wrap {
+    max-width: 1000px;
+}
+
+.dci-import-wrap h1 {
+    margin-bottom: 30px;
+}
+
+.dci-import-wrap .button-primary {
+    height: 40px;
+    line-height: 38px;
+    padding: 0 20px;
+    font-size: 14px;
+}
+
+/* Responsive tables */
+@media screen and (max-width: 782px) {
+    .dci-import-wrap table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .dci-results-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Post edit screen improvements */
+.post-type-drink .misc-pub-section,
+.post-type-cocktail .misc-pub-section {
+    padding: 10px 10px 10px 12px;
+}
+
+.post-type-drink #normal-sortables,
+.post-type-cocktail #normal-sortables {
+    min-height: 0;
+}
+
+/* Color picker custom styles */
+input[type="color"] {
+    width: 60px;
+    height: 40px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Loading spinner */
+.dci-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #2271b1;
+    border-radius: 50%;
+    animation: dci-spin 1s linear infinite;
+}
+
+@keyframes dci-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Stat boxes with status colors */
+.dci-stat-success {
+    border-left: 4px solid #00a32a;
+}
+
+.dci-stat-info {
+    border-left: 4px solid #2271b1;
+}
+
+.dci-stat-warning {
+    border-left: 4px solid #dba617;
+}
+
+.dci-stat-error {
+    border-left: 4px solid #d63638;
+}
+
+/* Import logs styling */
+.dci-logs-container {
+    background: #23282d;
+    color: #eee;
+    padding: 15px;
+    border-radius: 4px;
+    line-height: 1.6;
+}
+
+.dci-log-entry {
+    margin: 4px 0;
+    padding: 2px 0;
+}
+
+.dci-log-entry:before {
+    content: "▶ ";
+    margin-right: 5px;
+}
+
+.dci-log-success {
+    color: #00ff00;
+}
+
+.dci-log-error {
+    color: #ff6b6b;
+}
+
+.dci-log-info {
+    color: #72aee6;
+}
+
+.dci-log-warning {
+    color: #ffba00;
+}
