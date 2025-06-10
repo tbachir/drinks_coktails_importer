@@ -2,8 +2,8 @@
 
 /**
  * Plugin Name: Drinks & Cocktails - Import & CPT
- * Description: Crée les CPT Drink/Cocktail, leurs metas, permet l’import JSON (relations par slugs), téléchargement différé des images, log des erreurs, et expose tout dans l’API REST.
- * Version: 2.0
+ * Description: Crée les CPT Drink/Cocktail, leurs metas, permet l’import JSON (relations par slugs), téléchargement différé des images, et expose tout dans l’API REST. Logging via error_log (WordPress).
+ * Version: 2.1
  * Author: OpenAI / Tarek Bachir
  */
 
@@ -19,7 +19,6 @@ class DCI_Plugin
         add_action('admin_menu', [$this, 'register_admin_page']);
         add_action('admin_post_dci_import_json', [$this, 'handle_import']);
         add_action('add_meta_boxes', [$this, 'add_image_downloader_metabox']);
-        add_action('save_post', [$this, 'handle_image_download_on_save']);
         add_action('rest_api_init', function () {
             register_rest_field('drink', 'image_square_url', [
                 'get_callback' => function ($object) {
@@ -36,23 +35,30 @@ class DCI_Plugin
         add_action('admin_post_dci_download_images_now', [$this, 'handle_direct_image_download']);
     }
 
-    /**
-     * Téléchargement direct des images pour un post donné
-     * Utilisé pour le téléchargement différé des images depuis la méta box
-     */
+    // LOG via error_log WP natif
+    private function dci_log($message, $type = 'debug') {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[DCI_Plugin][' . $type . '] ' . $message);
+        }
+    }
+
     public function handle_direct_image_download()
     {
-        if (!current_user_can('edit_posts')) {
+        $post_id = isset($_GET['post_id']) ? intval($_GET['post_id']) : 0;
+        if (!current_user_can('edit_post', $post_id)) {
+            $this->dci_log("Accès refusé téléchargement images post $post_id", 'error');
             wp_die('Non autorisé.');
         }
-        $post_id = isset($_GET['post_id']) ? intval($_GET['post_id']) : 0;
         if (!$post_id || !wp_verify_nonce($_GET['_wpnonce'], 'dci_download_images_now_' . $post_id)) {
+            $this->dci_log("Requête non valide téléchargement images post $post_id", 'error');
             wp_die('Requête non valide.');
         }
 
+        $this->dci_log("Action téléchargement d'image via admin-post pour post $post_id", 'debug');
         $errors = [];
         $image_url = get_post_meta($post_id, 'image', true);
         if ($image_url && !has_post_thumbnail($post_id)) {
+            $this->dci_log("Début téléchargement image principale $image_url pour post $post_id", 'debug');
             $this->set_featured_image_from_url($image_url, $post_id);
             if (!has_post_thumbnail($post_id)) $errors[] = "Image principale : échec du téléchargement.";
         }
@@ -61,6 +67,7 @@ class DCI_Plugin
             $image_square_url = get_post_meta($post_id, 'image_square', true);
             $square_id = get_post_meta($post_id, 'image_square_id', true);
             if ($image_square_url && !$square_id) {
+                $this->dci_log("Début téléchargement image carrée $image_square_url pour post $post_id", 'debug');
                 $image_square_id = $this->sideload_media_and_attach($image_square_url, $post_id, 'image_square');
                 if ($image_square_id) {
                     update_post_meta($post_id, 'image_square_id', $image_square_id);
@@ -70,19 +77,9 @@ class DCI_Plugin
             }
         }
         $redir = get_edit_post_link($post_id, 'redirect') . '&dci_img=' . (empty($errors) ? 'ok' : 'fail');
+        $this->dci_log("Fin téléchargement images pour post $post_id - Succès: " . (empty($errors) ? "oui" : "non"), 'debug');
         wp_redirect($redir);
         exit;
-    }
-
-
-    /** Log des erreurs dans wp-content/uploads/dci_import_log.txt */
-    private function log_error($message)
-    {
-        $upload_dir = wp_upload_dir();
-        $log_file = trailingslashit($upload_dir['basedir']) . 'dci_import_log.txt';
-        $date = date('Y-m-d H:i:s');
-        $msg = "[$date] $message\n";
-        @file_put_contents($log_file, $msg, FILE_APPEND | LOCK_EX);
     }
 
     public function register_post_types()
@@ -169,7 +166,7 @@ class DCI_Plugin
 
     public function import_page_html()
     {
-?>
+        ?>
         <div class="wrap">
             <h1>Importer Drinks & Cocktails (JSON)</h1>
             <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" enctype="multipart/form-data">
@@ -200,20 +197,24 @@ class DCI_Plugin
 
     public function handle_import()
     {
-        if (! current_user_can('manage_options')) wp_die('Non autorisé.');
+        $this->dci_log("Début de l'import des fichiers JSON.", 'debug');
+        if (! current_user_can('manage_options')) {
+            $this->dci_log("Accès refusé à l'import.", 'error');
+            wp_die('Non autorisé.');
+        }
         check_admin_referer('dci_import_json');
 
         $uploads = [];
         foreach (['drinks_json', 'cocktails_json'] as $input) {
             if (! isset($_FILES[$input]) || $_FILES[$input]['error'] !== UPLOAD_ERR_OK) {
-                $this->log_error("Fichier manquant ou corrompu : $input");
+                $this->dci_log("Fichier manquant ou corrompu : $input", 'error');
                 wp_redirect(admin_url('tools.php?page=dci-importer&error=1'));
                 exit;
             }
             $content = file_get_contents($_FILES[$input]['tmp_name']);
             $data = json_decode($content, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                $this->log_error("Erreur JSON dans $input : " . json_last_error_msg());
+                $this->dci_log("Erreur JSON dans $input : " . json_last_error_msg(), 'error');
                 wp_redirect(admin_url('tools.php?page=dci-importer&error=2'));
                 exit;
             }
@@ -223,33 +224,31 @@ class DCI_Plugin
         $drinks = $uploads['drinks_json']['drinks'] ?? [];
         $cocktails = $uploads['cocktails_json']['cocktails'] ?? [];
 
-        // 1. Import posts et mapping slug=>ID
         $drink_ids = [];
         foreach ($drinks as $drink) {
             $post_id = $this->insert_post('drink', $drink['name'], $drink['slug'], $drink['description'], $drink, true);
+            $this->dci_log("Drink importé : {$drink['slug']} (ID: $post_id)", 'debug');
             $drink_ids[$drink['slug']] = $post_id;
         }
         $cocktail_ids = [];
         foreach ($cocktails as $cocktail) {
             $post_id = $this->insert_post('cocktail', $cocktail['name'], $cocktail['slug'], $cocktail['description'], $cocktail, false);
+            $this->dci_log("Cocktail importé : {$cocktail['slug']} (ID: $post_id)", 'debug');
             $cocktail_ids[$cocktail['slug']] = $post_id;
         }
 
-        // 2. Mapping slug => ID pour les relations
         $drink_slugs = $drink_ids;
         $cocktail_slugs = $cocktail_ids;
 
-        // 3. Stockage des relations via slugs (et ID pour WP)
         foreach ($drinks as $drink) {
             $post_id = $drink_ids[$drink['slug']];
 
-            // featured_cocktail_slug
             if (! empty($drink['featured_cocktail_slug']) && isset($cocktail_slugs[$drink['featured_cocktail_slug']])) {
                 update_post_meta($post_id, 'featured_cocktail_id', $cocktail_slugs[$drink['featured_cocktail_slug']]);
                 update_post_meta($post_id, 'featured_cocktail_slug', $drink['featured_cocktail_slug']);
+                $this->dci_log("Relation featured_cocktail_slug pour drink {$drink['slug']} -> {$drink['featured_cocktail_slug']}", 'debug');
             }
 
-            // cocktails: tableau de slugs
             if (! empty($drink['cocktails']) && is_array($drink['cocktails'])) {
                 $cocktail_posts = [];
                 foreach ($drink['cocktails'] as $c_slug) {
@@ -257,6 +256,7 @@ class DCI_Plugin
                 }
                 update_post_meta($post_id, 'cocktails', $cocktail_posts);
                 update_post_meta($post_id, 'cocktail_slugs', $drink['cocktails']);
+                $this->dci_log("Relations cocktails pour drink {$drink['slug']}", 'debug');
             }
         }
         foreach ($cocktails as $cocktail) {
@@ -268,14 +268,17 @@ class DCI_Plugin
                 }
                 update_post_meta($post_id, 'drinks', $drink_posts);
                 update_post_meta($post_id, 'drink_slugs', $cocktail['drinks']);
+                $this->dci_log("Relations drinks pour cocktail {$cocktail['slug']}", 'debug');
             }
         }
+        $this->dci_log("Fin de l'import des fichiers JSON.", 'debug');
         wp_redirect(admin_url('tools.php?page=dci-importer&imported=1'));
         exit;
     }
 
     private function insert_post($type, $title, $slug, $description, $data, $is_drink = false)
     {
+        $this->dci_log("Insertion du post $type : $title (slug: $slug)", 'debug');
         $exists = get_page_by_path($slug, OBJECT, $type);
         if ($exists) {
             $post_id = $exists->ID;
@@ -304,83 +307,53 @@ class DCI_Plugin
             }
         }
 
-        // (AUCUN téléchargement d'image à l'import : seules les URLs sont stockées.)
-
         return $post_id;
     }
 
-    // Méta box pour télécharger les images à la demande sur chaque post
-    public function add_image_downloader_metabox() {
-    foreach (['drink', 'cocktail'] as $type) {
-        add_meta_box('dci_image_downloader', 'Télécharger les images', function($post) use ($type) {
-            $image_url = get_post_meta($post->ID, 'image', true);
-            $image_square_url = ($type === 'drink') ? get_post_meta($post->ID, 'image_square', true) : null;
-            $has_thumb = has_post_thumbnail($post->ID);
-            $square_id = get_post_meta($post->ID, 'image_square_id', true);
-            // Feedback post-action
-            if (isset($_GET['dci_img']) && $_GET['dci_img'] === 'ok') {
-                echo '<div class="notice notice-success"><p>Images importées !</p></div>';
-            } elseif (isset($_GET['dci_img']) && $_GET['dci_img'] === 'fail') {
-                echo '<div class="notice notice-error"><p>Erreur lors du téléchargement d\'au moins une image. Consulte le log.</p></div>';
-            }
-            ?>
-            <p>
-                <strong>Image principale :</strong><br>
-                <?php echo $image_url ? esc_html($image_url) : '<em>aucune</em>'; ?><br>
-                <?php if ($has_thumb): ?>
-                    <span style="color:green">✔ Image à la une déjà présente</span>
-                <?php endif; ?>
-            </p>
-            <?php if ($type === 'drink'): ?>
-            <p>
-                <strong>Image carrée :</strong><br>
-                <?php echo $image_square_url ? esc_html($image_square_url) : '<em>aucune</em>'; ?><br>
-                <?php if ($square_id): ?>
-                    <span style="color:green">✔ Image carrée déjà téléchargée</span>
-                <?php endif; ?>
-            </p>
-            <?php endif; ?>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <?php wp_nonce_field('dci_download_images_now_' . $post->ID); ?>
-                <input type="hidden" name="action" value="dci_download_images_now" />
-                <input type="hidden" name="post_id" value="<?php echo esc_attr($post->ID); ?>" />
-                <input type="submit" class="button" value="Télécharger les images maintenant" <?php if ($has_thumb && ($type !== 'drink' || $square_id)) echo 'disabled style="opacity:0.5;"'; ?> />
-            </form>
-            <?php
-        }, $type);
-    }
-}
-
-
-    // Lors du submit de la méta box, télécharger les images si demandé
-    public function handle_image_download_on_save($post_id)
+    public function add_image_downloader_metabox()
     {
-        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
-        if (!isset($_POST['dci_download_images'])) return;
-        if (!current_user_can('edit_post', $post_id)) return;
-        if (!wp_verify_nonce($_POST['_wpnonce'], 'dci_download_image_' . $post_id)) return;
-
-        $image_url = get_post_meta($post_id, 'image', true);
-        if ($image_url && !has_post_thumbnail($post_id)) {
-            $this->set_featured_image_from_url($image_url, $post_id);
-        }
-
-        $post_type = get_post_type($post_id);
-        if ($post_type === 'drink') {
-            $image_square_url = get_post_meta($post_id, 'image_square', true);
-            $square_id = get_post_meta($post_id, 'image_square_id', true);
-            if ($image_square_url && !$square_id) {
-                $image_square_id = $this->sideload_media_and_attach($image_square_url, $post_id, 'image_square');
-                if ($image_square_id) {
-                    update_post_meta($post_id, 'image_square_id', $image_square_id);
+        foreach (['drink', 'cocktail'] as $type) {
+            add_meta_box('dci_image_downloader', 'Télécharger les images', function ($post) use ($type) {
+                $image_url = get_post_meta($post->ID, 'image', true);
+                $image_square_url = ($type === 'drink') ? get_post_meta($post->ID, 'image_square', true) : null;
+                $has_thumb = has_post_thumbnail($post->ID);
+                $square_id = get_post_meta($post->ID, 'image_square_id', true);
+                if (isset($_GET['dci_img']) && $_GET['dci_img'] === 'ok') {
+                    echo '<div class="notice notice-success"><p>Images importées !</p></div>';
+                } elseif (isset($_GET['dci_img']) && $_GET['dci_img'] === 'fail') {
+                    echo '<div class="notice notice-error"><p>Erreur lors du téléchargement d\'au moins une image. Consulte le log.</p></div>';
                 }
-            }
+                ?>
+                <p>
+                    <strong>Image principale :</strong><br>
+                    <?php echo $image_url ? esc_html($image_url) : '<em>aucune</em>'; ?><br>
+                    <?php if ($has_thumb): ?>
+                        <span style="color:green">✔ Image à la une déjà présente</span>
+                    <?php endif; ?>
+                </p>
+                <?php if ($type === 'drink'): ?>
+                    <p>
+                        <strong>Image carrée :</strong><br>
+                        <?php echo $image_square_url ? esc_html($image_square_url) : '<em>aucune</em>'; ?><br>
+                        <?php if ($square_id): ?>
+                            <span style="color:green">✔ Image carrée déjà téléchargée</span>
+                        <?php endif; ?>
+                    </p>
+                <?php endif; ?>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field('dci_download_images_now_' . $post->ID); ?>
+                    <input type="hidden" name="action" value="dci_download_images_now" />
+                    <input type="hidden" name="post_id" value="<?php echo esc_attr($post->ID); ?>" />
+                    <input type="submit" class="button" value="Télécharger les images maintenant" <?php if ($has_thumb && ($type !== 'drink' || $square_id)) echo 'disabled style="opacity:0.5;"'; ?> />
+                </form>
+                <?php
+            }, $type);
         }
     }
 
-    // Télécharge une image et l'affecte comme featured image si succès
     private function set_featured_image_from_url($image_url, $post_id)
     {
+        $this->dci_log("Téléchargement image à la une depuis $image_url pour post $post_id", 'debug');
         require_once(ABSPATH . 'wp-admin/includes/file.php');
         require_once(ABSPATH . 'wp-admin/includes/media.php');
         require_once(ABSPATH . 'wp-admin/includes/image.php');
@@ -388,7 +361,7 @@ class DCI_Plugin
         if ($existing_thumb) return;
         $tmp = download_url($image_url);
         if (is_wp_error($tmp)) {
-            $this->log_error("Echec du téléchargement de l'image $image_url pour post $post_id : " . $tmp->get_error_message());
+            $this->dci_log("Echec du téléchargement de l'image $image_url pour post $post_id : " . $tmp->get_error_message(), 'error');
             return;
         }
         $file_array = [
@@ -397,23 +370,24 @@ class DCI_Plugin
         ];
         $id = media_handle_sideload($file_array, $post_id);
         if (is_wp_error($id)) {
-            $this->log_error("Echec media_handle_sideload pour $image_url (post $post_id): " . $id->get_error_message());
+            $this->dci_log("Echec media_handle_sideload pour $image_url (post $post_id): " . $id->get_error_message(), 'error');
             @unlink($tmp);
             return;
         }
         set_post_thumbnail($post_id, $id);
         @unlink($tmp);
+        $this->dci_log("Image à la une importée pour post $post_id (ID média: $id)", 'debug');
     }
 
-    // Télécharge une image (image_square), l’attache au post, retourne son ID
     private function sideload_media_and_attach($image_url, $post_id, $desc = '')
     {
+        $this->dci_log("Téléchargement image extra (square) depuis $image_url pour post $post_id", 'debug');
         require_once(ABSPATH . 'wp-admin/includes/file.php');
         require_once(ABSPATH . 'wp-admin/includes/media.php');
         require_once(ABSPATH . 'wp-admin/includes/image.php');
         $tmp = download_url($image_url);
         if (is_wp_error($tmp)) {
-            $this->log_error("Echec du téléchargement de l'image_square $image_url pour post $post_id : " . $tmp->get_error_message());
+            $this->dci_log("Echec du téléchargement de l'image_square $image_url pour post $post_id : " . $tmp->get_error_message(), 'error');
             return false;
         }
         $file_array = [
@@ -422,11 +396,12 @@ class DCI_Plugin
         ];
         $id = media_handle_sideload($file_array, $post_id, $desc);
         if (is_wp_error($id)) {
-            $this->log_error("Echec media_handle_sideload (image_square) pour $image_url (post $post_id): " . $id->get_error_message());
+            $this->dci_log("Echec media_handle_sideload (image_square) pour $image_url (post $post_id): " . $id->get_error_message(), 'error');
             @unlink($tmp);
             return false;
         }
         @unlink($tmp);
+        $this->dci_log("Image carrée importée pour post $post_id (ID média: $id)", 'debug');
         return $id;
     }
 }
