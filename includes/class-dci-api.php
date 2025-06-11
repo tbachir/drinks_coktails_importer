@@ -44,7 +44,7 @@ add_action('rest_api_init', function () {
  * Endpoint REST "light" pour la liste des drinks
  */
 add_action('rest_api_init', function () {
-    register_rest_route('api/v1', '/drinks', [
+    register_rest_route('wp/v2', '/drinks', [
         'methods'  => 'GET',
         'callback' => 'cryptonic_api_get_drinks',
         'permission_callback' => '__return_true'
@@ -74,7 +74,7 @@ function cryptonic_api_get_drinks($request)
 }
 
 add_action('rest_api_init', function () {
-    register_rest_route('api/v1', '/cocktails', [
+    register_rest_route('wp/v2', '/cocktails', [
         'methods'  => 'GET',
         'callback' => 'cryptonic_api_get_cocktails',
         'permission_callback' => '__return_true' // Adapter si besoin sécurité
@@ -91,7 +91,6 @@ function cryptonic_api_get_cocktails($request)
         'post_status'    => 'publish',
         'posts_per_page' => -1
     ]);
-    $cocktails_instance = new Cocktails();
     $data = [];
     foreach ($posts as $post) {
         $meta = Cocktails::get_cocktail_meta(['id' => $post->ID]);

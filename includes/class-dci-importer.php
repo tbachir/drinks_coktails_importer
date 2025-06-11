@@ -1,5 +1,4 @@
 <?php
-ini_set('max_execution_time', 300);
 /**
  * Classe d'import pour Drinks & Cocktails
  * 
@@ -8,7 +7,7 @@ ini_set('max_execution_time', 300);
  */
 
 if (!defined('ABSPATH')) exit;
-
+ini_set('max_execution_time', 900);
 class DCI_Importer
 {
 
@@ -169,7 +168,7 @@ class DCI_Importer
         $image_url = $data['image'] ?? null;
         $cutout_image_url = $data['cutout_image'] ?? null;
 
-        if ($image_url && filter_var($image_url, FILTER_VALIDATE_URL)) {
+        if ($image_url) {
             $attachment_id = $this->import_external_image($image_url, $post_id, 'Image Boisson');
             if (!is_wp_error($attachment_id)) {
                 update_post_meta($post_id, '_image_id', $attachment_id);
@@ -177,7 +176,7 @@ class DCI_Importer
             }
         }
 
-        if ($cutout_image_url && filter_var($cutout_image_url, FILTER_VALIDATE_URL)) {
+        if ($cutout_image_url) {
             $attachment_id = $this->import_external_image($cutout_image_url, $post_id, 'Image Bouteille');
             if (!is_wp_error($attachment_id)) {
                 update_post_meta($post_id, '_cutout_image_id', $attachment_id);

@@ -81,7 +81,7 @@ class Drinks
                 'type' => 'object',
                 'properties' => array(
                     'tagline' => array('type' => 'string'),
-                    'description_complete' => array('type' => 'string'),
+                    'description_short' => array('type' => 'string'),
                     'type' => array('type' => 'string'),
                     'volume_ml' => array('type' => 'integer'),
                     'tasting_notes' => array('type' => 'array'),
@@ -105,7 +105,7 @@ class Drinks
     {
         return array(
             'tagline' => get_post_meta($post['id'], '_tagline', true),
-            'description_complete' => get_post_meta($post['id'], '_description_complete', true),
+            'description_short' => get_post_meta($post['id'], '_description_short', true),
             'type' => get_post_meta($post['id'], '_type', true),
             'volume_ml' => get_post_meta($post['id'], '_volume_ml', true),
             'tasting_notes' => self::get_repeater_field($post['id'], '_tasting_notes'),
@@ -136,8 +136,8 @@ class Drinks
         if (isset($data['tagline'])) {
             update_post_meta($post_id, '_tagline', sanitize_text_field($data['tagline']));
         }
-        if (isset($data['description_complete'])) {
-            update_post_meta($post_id, '_description_complete', wp_kses_post($data['description_complete']));
+        if (isset($data['description_short'])) {
+            update_post_meta($post_id, '_description_short', wp_kses_post($data['description_short']));
         }
         if (isset($data['type'])) {
             update_post_meta($post_id, '_type', sanitize_text_field($data['type']));
@@ -185,7 +185,7 @@ class Drinks
             }
             $data = array(
                 'tagline'     => $_POST['tagline'] ?? null,
-                'description_complete' => $_POST['description_complete'] ?? null,
+                'description_short' => $_POST['description_short'] ?? null,
                 'type'        => $_POST['type'] ?? null,
                 'volume_ml'   => $_POST['volume_ml'] ?? null,
                 'tasting_notes' => $_POST['tasting_notes'] ?? null,
@@ -225,7 +225,7 @@ class Drinks
         wp_nonce_field('drink_meta', 'drink_meta_nonce');
 
         $tagline = get_post_meta($post->ID, '_tagline', true);
-        $description_complete = get_post_meta($post->ID, '_description_complete', true);
+        $description_short = get_post_meta($post->ID, '_description_short', true);
         $type = get_post_meta($post->ID, '_type', true);
         $volume_ml = get_post_meta($post->ID, '_volume_ml', true);
         $tasting_notes = self::get_repeater_field($post->ID, '_tasting_notes');
@@ -245,11 +245,11 @@ class Drinks
                 <td><input type="text" id="tagline" name="tagline" value="<?php echo esc_attr($tagline); ?>" class="regular-text" /></td>
             </tr>
             <tr>
-                <th><label for="description_complete">Description complète</label></th>
+                <th><label for="description_short">Description complète</label></th>
                 <td>
                     <?php
-                    wp_editor($description_complete, 'description_complete', array(
-                        'textarea_name' => 'description_complete',
+                    wp_editor($description_short, 'description_short', array(
+                        'textarea_name' => 'description_short',
                         'media_buttons' => false,
                         'textarea_rows' => 8,
                         'teeny' => true

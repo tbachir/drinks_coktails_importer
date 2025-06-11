@@ -139,12 +139,6 @@ class DCI_Plugin
             if (file_exists($importer_file)) {
                 require_once $importer_file;
             }
-
-            $imageMonitor_file = DCI_PLUGIN_DIR . 'includes/class-dci-image-monitor.php';
-            if (file_exists($imageMonitor_file)) {
-                require_once $imageMonitor_file;
-                $this->imageMonitor = new DCI_Image_Monitor();
-            }
         }
     }
 
