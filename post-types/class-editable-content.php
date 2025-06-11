@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Post Type pour contenu éditable - Version JWT
+ * Post Type pour contenu éditable - Version JWT + version incrémentale
  * 
  * @package Inline_Editor_CMS
  * @subpackage PostTypes
@@ -97,7 +97,8 @@ class Editable_Content
                     'editable_id' => get_post_meta($post['id'], '_editable_id', true),
                     'context' => get_post_meta($post['id'], '_context', true) ?: '/',
                     'context_id' => get_post_meta($post['id'], '_context_id', true) ?: 0,
-                    'content_type' => get_post_meta($post['id'], '_content_type', true) ?: 'text'
+                    'content_type' => get_post_meta($post['id'], '_content_type', true) ?: 'text',
+                    'version' => intval(get_post_meta($post['id'], '_version', true)) ?: 1
                 );
             }
         ));
@@ -137,13 +138,14 @@ class Editable_Content
     public function get_editable_meta($post)
     {
         $revisions = wp_get_post_revisions($post['id']);
-        $last_revision_id = count($revisions) ? array_key_first($revisions) : 0;
+        $last_revision_id = count($revisions) ? array_key_last($revisions) : 0;
 
         return array(
             'context' => get_post_meta($post['id'], '_context', true) ?: '/',
             'context_id' => get_post_meta($post['id'], '_context_id', true) ?: 0,
             'content_type' => get_post_meta($post['id'], '_content_type', true) ?: 'text',
-            'version' => $last_revision_id
+            'version' => intval(get_post_meta($post['id'], '_version', true)) ?: 1,
+            'last_revision_id' => $last_revision_id
         );
     }
 
@@ -151,9 +153,9 @@ class Editable_Content
     {
         $args = array(
             'post_type' => 'editable_content',
-            'posts_per_page' => -1, // tout récupérer
-            'post_status' => 'publish', // tu peux ajouter 'any' pour tout (même corbeille/draft)
-            'fields' => 'ids' // pour lister juste les IDs d'abord (optimisation)
+            'posts_per_page' => -1,
+            'post_status' => 'publish',
+            'fields' => 'ids'
         );
         $post_ids = get_posts($args);
 
@@ -162,10 +164,7 @@ class Editable_Content
             $context = get_post_meta($post_id, '_context', true) ?: '/';
             $context_id = get_post_meta($post_id, '_context_id', true) ?: '';
             $content = get_post_field('post_content', $post_id);
-
-            // version = dernière révision (même logique que ton code actuel)
-            $revisions = wp_get_post_revisions($post_id);
-            $version = count($revisions) ? array_key_first($revisions) : 0;
+            $version = intval(get_post_meta($post_id, '_version', true)) ?: 1;
 
             $result[] = array(
                 'context' => $context,
@@ -184,8 +183,7 @@ class Editable_Content
     public function get_content_by_context($request)
     {
         $context = sanitize_text_field($request->get_param('context') ?? '/');
-        $context_id = sanitize_text_field($params['context_id'] ?? '');
-
+        $context_id = sanitize_text_field($request->get_param('context_id') ?? '');
 
         $posts = get_posts(array(
             'post_type' => 'editable_content',
@@ -201,23 +199,28 @@ class Editable_Content
                 'content' => '',
                 'context' => $context,
                 'context_id' => $context_id,
-                'exists' => false
+                'exists' => false,
+                'version' => 0
             ));
         }
 
         $post = $posts[0];
+        $version = intval(get_post_meta($post->ID, '_version', true)) ?: 1;
+
         return rest_ensure_response(array(
             'id' => $post->ID,
             'content' => $post->post_content,
             'context' => $context,
             'context_id' => $context_id,
             'exists' => true,
-            'updated_at' => $post->post_modified
+            'updated_at' => $post->post_modified,
+            'version' => $version
         ));
     }
 
     /**
      * POST : Persiste le contenu (update ou create) selon context/context_id
+     * -> Gère le versioning incrémental sur _version
      */
     public function save_content_by_context($request)
     {
@@ -245,11 +248,20 @@ class Editable_Content
         ));
 
         if (!empty($existing_posts)) {
-            $post_id = wp_update_post(array(
-                'ID' => $existing_posts[0]->ID,
+            $post_id = $existing_posts[0]->ID;
+
+            // Versionning incrémental
+            $version = intval(get_post_meta($post_id, '_version', true));
+            $version = $version ? $version + 1 : 1;
+            update_post_meta($post_id, '_version', $version);
+
+            // Update post content
+            wp_update_post(array(
+                'ID' => $post_id,
                 'post_content' => is_string($content) ? $content : json_encode($content)
             ));
         } else {
+            // Nouveau contenu, version = 1
             $post_id = wp_insert_post(array(
                 'post_title' => "Editable: {$context}/{$context_id}",
                 'post_content' => is_string($content) ? $content : json_encode($content),
@@ -261,6 +273,7 @@ class Editable_Content
                 update_post_meta($post_id, '_context', $context);
                 update_post_meta($post_id, '_context_id', $context_id);
                 update_post_meta($post_id, '_content_type', is_string($content) ? 'text' : 'json');
+                update_post_meta($post_id, '_version', 1);
             }
         }
 
@@ -270,15 +283,14 @@ class Editable_Content
 
         error_log(sprintf('[Inline-Editor-CMS] Content saved: %s/%s by user %d', $context, $context_id, get_current_user_id()));
 
-        $revisions = wp_get_post_revisions($post['id']);
-        $last_revision_id = count($revisions) ? array_key_first($revisions) : 0;
+        $version = intval(get_post_meta($post_id, '_version', true)) ?: 1;
         return rest_ensure_response(array(
             'success' => true,
             'post_id' => $post_id,
             'context' => $context,
             'context_id' => $context_id,
             'message' => 'Contenu sauvegardé avec succès',
-            'version' => $last_revision_id
+            'version' => $version
         ));
     }
 }
