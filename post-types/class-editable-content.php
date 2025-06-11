@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Post Type pour contenu éditable - Version JWT + version incrémentale
+ * Post Type pour contenu éditable - Version avec gestion des conflits et versions
  * 
  * @package Inline_Editor_CMS
  * @subpackage PostTypes
@@ -104,23 +104,23 @@ class Editable_Content
         ));
     }
 
-
     public function register_custom_endpoints()
     {
-        // GET via context/context_id
+        // GET all editable content
         register_rest_route('api', '/editable-content', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_all_editable_content'),
             'permission_callback' => '__return_true'
         ));
 
+        // GET specific content by context
         register_rest_route('api', '/editable-content/get', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_content_by_context'),
             'permission_callback' => '__return_true'
         ));
 
-        // POST persist (create/update) via context/context_id
+        // POST save content
         register_rest_route('api', '/editable-content/save', array(
             'methods' => 'POST',
             'callback' => array($this, 'save_content_by_context'),
@@ -132,6 +132,7 @@ class Editable_Content
     {
         return is_user_logged_in();
     }
+
     /**
      * Récupérer les métadonnées du contenu éditable
      */
@@ -149,6 +150,9 @@ class Editable_Content
         );
     }
 
+    /**
+     * GET all editable content
+     */
     public function get_all_editable_content($request)
     {
         $args = array(
@@ -161,16 +165,25 @@ class Editable_Content
 
         $result = array();
         foreach ($post_ids as $post_id) {
+            $editable_id = get_post_meta($post_id, '_editable_id', true);
+            if (!$editable_id) {
+                $editable_id = $this->generate_editable_id($post_id);
+                update_post_meta($post_id, '_editable_id', $editable_id);
+            }
+
             $context = get_post_meta($post_id, '_context', true) ?: '/';
             $context_id = get_post_meta($post_id, '_context_id', true) ?: '';
             $content = get_post_field('post_content', $post_id);
             $version = intval(get_post_meta($post_id, '_version', true)) ?: 1;
+            $content_type = get_post_meta($post_id, '_content_type', true) ?: 'text';
 
             $result[] = array(
+                'editable_id' => $editable_id,
                 'context' => $context,
                 'context_id' => $context_id,
                 'version' => $version,
-                'content' => $content
+                'content' => $content,
+                'content_type' => $content_type
             );
         }
 
@@ -205,13 +218,21 @@ class Editable_Content
         }
 
         $post = $posts[0];
+        $editable_id = get_post_meta($post->ID, '_editable_id', true);
+        if (!$editable_id) {
+            $editable_id = $this->generate_editable_id($post->ID);
+            update_post_meta($post->ID, '_editable_id', $editable_id);
+        }
+
         $version = intval(get_post_meta($post->ID, '_version', true)) ?: 1;
+        $content_type = get_post_meta($post->ID, '_content_type', true) ?: 'text';
 
         return rest_ensure_response(array(
-            'id' => $post->ID,
+            'editable_id' => $editable_id,
             'content' => $post->post_content,
             'context' => $context,
             'context_id' => $context_id,
+            'content_type' => $content_type,
             'exists' => true,
             'updated_at' => $post->post_modified,
             'version' => $version
@@ -219,8 +240,7 @@ class Editable_Content
     }
 
     /**
-     * POST : Persiste le contenu (update ou create) selon context/context_id
-     * -> Gère le versioning incrémental sur _version
+     * POST : Sauvegarder le contenu avec gestion des conflits et versions
      */
     public function save_content_by_context($request)
     {
@@ -228,16 +248,28 @@ class Editable_Content
         $content = $params['content'] ?? null;
         $context = sanitize_text_field($params['context'] ?? '/');
         $context_id = sanitize_text_field($params['context_id'] ?? '');
+        $client_version = isset($params['version']) ? intval($params['version']) : null;
+        $is_default_content = $params['isDefaultContent'] ?? false;
+        $content_type = sanitize_text_field($params['content_type'] ?? 'text');
 
+        // Validation des paramètres requis
         if ($content === null) {
-            return new WP_Error('missing_data', 'content requis', array('status' => 400));
+            return rest_ensure_response(array(
+                'status' => 'error',
+                'message' => 'Le contenu est requis',
+                'data' => null
+            ));
         }
 
         if (!current_user_can('edit_posts')) {
-            return new WP_Error('insufficient_permissions', 'Permissions insuffisantes', array('status' => 403));
+            return rest_ensure_response(array(
+                'status' => 'error',
+                'message' => 'Permissions insuffisantes',
+                'data' => null
+            ));
         }
 
-        // Recherche sur context/context_id
+        // Recherche du contenu existant
         $existing_posts = get_posts(array(
             'post_type' => 'editable_content',
             'meta_query' => array(
@@ -247,50 +279,158 @@ class Editable_Content
             'posts_per_page' => 1
         ));
 
+        // Si c'est un contenu par défaut et qu'il existe déjà, ne rien faire
+        if ($is_default_content && !empty($existing_posts)) {
+            $post = $existing_posts[0];
+            $editable_id = get_post_meta($post->ID, '_editable_id', true);
+            if (!$editable_id) {
+                $editable_id = $this->generate_editable_id($post->ID);
+                update_post_meta($post->ID, '_editable_id', $editable_id);
+            }
+
+            return rest_ensure_response(array(
+                'status' => 'no_action',
+                'message' => 'Le contenu existe déjà',
+                'data' => array(
+                    'editable_id' => $editable_id,
+                    'content' => $post->post_content,
+                    'context' => $context,
+                    'context_id' => $context_id,
+                    'version' => intval(get_post_meta($post->ID, '_version', true)) ?: 1,
+                    'content_type' => get_post_meta($post->ID, '_content_type', true) ?: 'text'
+                )
+            ));
+        }
+
+        // Mise à jour d'un contenu existant
         if (!empty($existing_posts)) {
             $post_id = $existing_posts[0]->ID;
+            $current_version = intval(get_post_meta($post_id, '_version', true)) ?: 1;
+            $current_content = get_post_field('post_content', $post_id);
 
-            // Versionning incrémental
-            $version = intval(get_post_meta($post_id, '_version', true));
-            $version = $version ? $version + 1 : 1;
-            update_post_meta($post_id, '_version', $version);
+            // Vérification de conflit de version
+            if ($client_version !== null && $client_version !== $current_version) {
+                $editable_id = get_post_meta($post_id, '_editable_id', true);
+                if (!$editable_id) {
+                    $editable_id = $this->generate_editable_id($post_id);
+                    update_post_meta($post_id, '_editable_id', $editable_id);
+                }
 
-            // Update post content
+                return rest_ensure_response(array(
+                    'status' => 'conflict',
+                    'message' => 'Conflit de version détecté',
+                    'data' => null,
+                    'conflict' => array(
+                        'client_version' => $client_version,
+                        'server_version' => $current_version,
+                        'server_content' => $current_content,
+                        'editable_id' => $editable_id
+                    )
+                ));
+            }
+
+            // Vérifier si le contenu a changé
+            if ($current_content === $content) {
+                $editable_id = get_post_meta($post_id, '_editable_id', true);
+                if (!$editable_id) {
+                    $editable_id = $this->generate_editable_id($post_id);
+                    update_post_meta($post_id, '_editable_id', $editable_id);
+                }
+
+                return rest_ensure_response(array(
+                    'status' => 'no_change',
+                    'message' => 'Aucune modification apportée',
+                    'data' => array(
+                        'editable_id' => $editable_id,
+                        'content' => $content,
+                        'context' => $context,
+                        'context_id' => $context_id,
+                        'version' => $current_version,
+                        'content_type' => get_post_meta($post_id, '_content_type', true) ?: 'text'
+                    )
+                ));
+            }
+
+            // Mise à jour avec incrémentation de version
+            $new_version = $current_version + 1;
             wp_update_post(array(
                 'ID' => $post_id,
-                'post_content' => is_string($content) ? $content : json_encode($content)
+                'post_content' => $content
             ));
-        } else {
-            // Nouveau contenu, version = 1
-            $post_id = wp_insert_post(array(
-                'post_title' => "Editable: {$context}/{$context_id}",
-                'post_content' => is_string($content) ? $content : json_encode($content),
-                'post_status' => 'publish',
-                'post_type' => 'editable_content'
-            ));
+            update_post_meta($post_id, '_version', $new_version);
+            update_post_meta($post_id, '_content_type', $content_type);
 
-            if (!is_wp_error($post_id)) {
-                update_post_meta($post_id, '_context', $context);
-                update_post_meta($post_id, '_context_id', $context_id);
-                update_post_meta($post_id, '_content_type', is_string($content) ? 'text' : 'json');
-                update_post_meta($post_id, '_version', 1);
+            $editable_id = get_post_meta($post_id, '_editable_id', true);
+            if (!$editable_id) {
+                $editable_id = $this->generate_editable_id($post_id);
+                update_post_meta($post_id, '_editable_id', $editable_id);
             }
+
+            error_log(sprintf('[Inline-Editor-CMS] Content updated: %s/%s (v%d->v%d) by user %d', 
+                $context, $context_id, $current_version, $new_version, get_current_user_id()));
+
+            return rest_ensure_response(array(
+                'status' => 'success',
+                'message' => 'Contenu mis à jour avec succès',
+                'data' => array(
+                    'editable_id' => $editable_id,
+                    'content' => $content,
+                    'context' => $context,
+                    'context_id' => $context_id,
+                    'version' => $new_version,
+                    'content_type' => $content_type
+                )
+            ));
         }
+
+        // Création d'un nouveau contenu
+        $post_id = wp_insert_post(array(
+            'post_title' => "Editable: {$context}/{$context_id}",
+            'post_content' => $content,
+            'post_status' => 'publish',
+            'post_type' => 'editable_content'
+        ));
 
         if (is_wp_error($post_id)) {
-            return new WP_Error('save_failed', $post_id->get_error_message(), array('status' => 500));
+            return rest_ensure_response(array(
+                'status' => 'error',
+                'message' => 'Erreur lors de la création : ' . $post_id->get_error_message(),
+                'data' => null
+            ));
         }
 
-        error_log(sprintf('[Inline-Editor-CMS] Content saved: %s/%s by user %d', $context, $context_id, get_current_user_id()));
+        // Générer un editable_id unique
+        $editable_id = $this->generate_editable_id($post_id);
+        
+        // Sauvegarder les métadonnées
+        update_post_meta($post_id, '_editable_id', $editable_id);
+        update_post_meta($post_id, '_context', $context);
+        update_post_meta($post_id, '_context_id', $context_id);
+        update_post_meta($post_id, '_content_type', $content_type);
+        update_post_meta($post_id, '_version', 1);
 
-        $version = intval(get_post_meta($post_id, '_version', true)) ?: 1;
+        error_log(sprintf('[Inline-Editor-CMS] Content created: %s/%s by user %d', 
+            $context, $context_id, get_current_user_id()));
+
         return rest_ensure_response(array(
-            'success' => true,
-            'post_id' => $post_id,
-            'context' => $context,
-            'context_id' => $context_id,
-            'message' => 'Contenu sauvegardé avec succès',
-            'version' => $version
+            'status' => 'success',
+            'message' => 'Contenu créé avec succès',
+            'data' => array(
+                'editable_id' => $editable_id,
+                'content' => $content,
+                'context' => $context,
+                'context_id' => $context_id,
+                'version' => 1,
+                'content_type' => $content_type
+            )
         ));
+    }
+
+    /**
+     * Générer un identifiant unique pour un contenu éditable
+     */
+    private function generate_editable_id($post_id)
+    {
+        return 'editable_' . $post_id . '_' . uniqid();
     }
 }
