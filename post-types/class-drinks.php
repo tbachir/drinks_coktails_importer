@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Post Type pour Drinks - Structure mise à jour
+ * Post Type pour Drinks - Version fusionnée & statique
  * 
  * @package Inline_Editor_CMS
  * @subpackage PostTypes
@@ -8,26 +9,29 @@
 
 if (!defined('ABSPATH')) exit;
 
-class Drinks {
-    
-    public function __construct() {
+class Drinks
+{
+    public function __construct()
+    {
         add_action('init', array($this, 'register_post_types'));
         add_action('rest_api_init', array($this, 'register_rest_fields'));
         add_action('add_meta_boxes', array($this, 'add_meta_boxes'));
         add_action('save_post', array($this, 'save_meta_boxes'));
     }
-    
+
     /**
      * Enregistrer le post type
      */
-    public function register_post_types() {
-        $this->register_drink_post_type();
+    public function register_post_types()
+    {
+        self::register_drink_post_type();
     }
-    
+
     /**
      * Post type pour les drinks/boissons
      */
-    private function register_drink_post_type() {
+    private static function register_drink_post_type()
+    {
         $labels = array(
             'name'               => _x('Drinks', 'Post type general name', 'inline-editor-cms'),
             'singular_name'      => _x('Drink', 'Post type singular name', 'inline-editor-cms'),
@@ -63,14 +67,15 @@ class Drinks {
 
         register_post_type('drink', $args);
     }
-    
+
     /**
      * Ajouter les champs personnalisés à l'API REST
      */
-    public function register_rest_fields() {
+    public function register_rest_fields()
+    {
         register_rest_field('drink', 'drink_meta', array(
             'get_callback' => array($this, 'get_drink_meta'),
-            'update_callback' => array($this, 'update_drink_meta'),
+            'update_callback' => array(__CLASS__, 'update_drink_meta'),
             'schema' => array(
                 'description' => 'Métadonnées du drink',
                 'type' => 'object',
@@ -83,78 +88,127 @@ class Drinks {
                     'characteristics' => array('type' => 'array'),
                     'note_speciale' => array('type' => 'string'),
                     'color' => array('type' => 'string'),
-                    'image_square' => array('type' => 'string'),
+                    'cutout_image' => array('type' => 'string'),
                     'featured_cocktail_id' => array('type' => 'integer'),
-                    'cocktails' => array('type' => 'array')
+                    'cocktails' => array('type' => 'array'),
+                    '_temp_featured_cocktail_slug' => array('type' => 'string'),
+                    '_temp_cocktail_slugs' => array('type' => 'array'),
                 )
             )
         ));
     }
-    
+
     /**
      * Récupérer les métadonnées d'un drink
      */
-    public function get_drink_meta($post) {
+    public function get_drink_meta($post)
+    {
         return array(
             'tagline' => get_post_meta($post['id'], '_tagline', true),
             'description_complete' => get_post_meta($post['id'], '_description_complete', true),
             'type' => get_post_meta($post['id'], '_type', true),
             'volume_ml' => get_post_meta($post['id'], '_volume_ml', true),
-            'tasting_notes' => $this->get_repeater_field($post['id'], '_tasting_notes'),
-            'characteristics' => $this->get_repeater_field($post['id'], '_characteristics'),
+            'tasting_notes' => self::get_repeater_field($post['id'], '_tasting_notes'),
+            'characteristics' => self::get_repeater_field($post['id'], '_characteristics'),
             'note_speciale' => get_post_meta($post['id'], '_note_speciale', true),
             'color' => get_post_meta($post['id'], '_color', true) ?: '#ddd49a',
-            'image_square' => get_post_meta($post['id'], '_image_square', true),
+            'cutout_image' => DCI_API::get_image_url($post['id'], '_cutout_image_id', '_cutout_image'),
+            'image' => DCI_API::get_image_url($post['id'], '_image_id', '_image'),
             'featured_cocktail_id' => get_post_meta($post['id'], '_featured_cocktail_id', true),
-            'cocktails' => $this->get_repeater_field($post['id'], '_cocktails')
+            'cocktails' => self::get_repeater_field($post['id'], '_cocktails'),
+            '_temp_featured_cocktail_slug' => get_post_meta($post['id'], '_temp_featured_cocktail_slug', true),
+            '_temp_cocktail_slugs' => self::get_repeater_field($post['id'], '_temp_cocktail_slugs'),
         );
     }
-    
+
     /**
-     * Mettre à jour les métadonnées d'un drink
+     * Callback REST pour mettre à jour les métadonnées d'un drink
      */
-    public function update_drink_meta($value, $post) {
-        if (isset($value['tagline'])) {
-            update_post_meta($post->ID, '_tagline', sanitize_text_field($value['tagline']));
-        }
-        if (isset($value['description_complete'])) {
-            update_post_meta($post->ID, '_description_complete', wp_kses_post($value['description_complete']));
-        }
-        if (isset($value['type'])) {
-            update_post_meta($post->ID, '_type', sanitize_text_field($value['type']));
-        }
-        if (isset($value['volume_ml'])) {
-            update_post_meta($post->ID, '_volume_ml', absint($value['volume_ml']));
-        }
-        if (isset($value['tasting_notes'])) {
-            $this->update_repeater_field($post->ID, '_tasting_notes', $value['tasting_notes']);
-        }
-        if (isset($value['characteristics'])) {
-            $this->update_repeater_field($post->ID, '_characteristics', $value['characteristics']);
-        }
-        if (isset($value['note_speciale'])) {
-            update_post_meta($post->ID, '_note_speciale', wp_kses_post($value['note_speciale']));
-        }
-        if (isset($value['color'])) {
-            update_post_meta($post->ID, '_color', sanitize_hex_color($value['color']));
-        }
-        if (isset($value['image_square'])) {
-            update_post_meta($post->ID, '_image_square', esc_url_raw($value['image_square']));
-        }
-        if (isset($value['featured_cocktail_id'])) {
-            update_post_meta($post->ID, '_featured_cocktail_id', absint($value['featured_cocktail_id']));
-        }
-        if (isset($value['cocktails'])) {
-            $this->update_cocktails_relation($post->ID, $value['cocktails']);
-        }
-        
+    public static function update_drink_meta($value, $post)
+    {
+        self::persist_drink_meta($post->ID, $value);
         return true;
     }
-    
+
+    /**
+     * Persistance unique des metas (fusion admin & REST) - STATIC
+     */
+    public static function persist_drink_meta($post_id, $data)
+    {
+        if (isset($data['tagline'])) {
+            update_post_meta($post_id, '_tagline', sanitize_text_field($data['tagline']));
+        }
+        if (isset($data['description_complete'])) {
+            update_post_meta($post_id, '_description_complete', wp_kses_post($data['description_complete']));
+        }
+        if (isset($data['type'])) {
+            update_post_meta($post_id, '_type', sanitize_text_field($data['type']));
+        }
+        if (isset($data['volume_ml'])) {
+            update_post_meta($post_id, '_volume_ml', absint($data['volume_ml']));
+        }
+        if (isset($data['tasting_notes'])) {
+            self::update_repeater_field($post_id, '_tasting_notes', $data['tasting_notes']);
+        }
+        if (isset($data['characteristics'])) {
+            self::update_repeater_field($post_id, '_characteristics', $data['characteristics']);
+        }
+        if (isset($data['note_speciale'])) {
+            update_post_meta($post_id, '_note_speciale', wp_kses_post($data['note_speciale']));
+        }
+        if (isset($data['color'])) {
+            update_post_meta($post_id, '_color', sanitize_hex_color($data['color']));
+        }
+        if (isset($data['cutout_image'])) {
+            update_post_meta($post_id, '_cutout_image', esc_url_raw($data['cutout_image']));
+        }
+        if (isset($data['featured_cocktail_id'])) {
+            update_post_meta($post_id, '_featured_cocktail_id', absint($data['featured_cocktail_id']));
+        }
+        if (isset($data['_temp_featured_cocktail_slug'])) {
+            update_post_meta($post_id, '_temp_featured_cocktail_slug', sanitize_text_field($data['_temp_featured_cocktail_slug']));
+        }
+        if (isset($data['cocktails']) && is_array($data['cocktails'])) {
+            self::update_cocktails_relation($post_id, $data['cocktails']);
+        }
+        if (isset($data['_temp_cocktail_slugs']) && is_array($data['_temp_cocktail_slugs'])) {
+            update_post_meta($post_id, '_temp_cocktail_slugs', $data['_temp_cocktail_slugs']);
+        }
+    }
+
+    /**
+     * Sauvegarder les meta boxes (admin)
+     */
+    public function save_meta_boxes($post_id)
+    {
+        if (get_post_type($post_id) === 'drink') {
+            if (!isset($_POST['drink_meta_nonce']) || !wp_verify_nonce($_POST['drink_meta_nonce'], 'drink_meta')) {
+                return;
+            }
+            $data = array(
+                'tagline'     => $_POST['tagline'] ?? null,
+                'description_complete' => $_POST['description_complete'] ?? null,
+                'type'        => $_POST['type'] ?? null,
+                'volume_ml'   => $_POST['volume_ml'] ?? null,
+                'tasting_notes' => $_POST['tasting_notes'] ?? null,
+                'characteristics' => $_POST['characteristics'] ?? null,
+                'note_speciale' => $_POST['note_speciale'] ?? null,
+                'color'       => $_POST['color'] ?? null,
+                'cutout_image' => $_POST['cutout_image'] ?? null,
+                'featured_cocktail_id' => $_POST['featured_cocktail_id'] ?? null,
+                '_temp_featured_cocktail_slug' => $_POST['_temp_featured_cocktail_slug'] ?? null,
+                'cocktails' => $_POST['cocktails'] ?? null,
+                '_temp_cocktail_slugs' => $_POST['_temp_cocktail_slugs'] ?? null,
+            );
+            self::persist_drink_meta($post_id, $data);
+        }
+    }
+
     /**
      * Ajouter les meta boxes
      */
-    public function add_meta_boxes() {
+    public function add_meta_boxes()
+    {
         add_meta_box(
             'drink_meta',
             'Informations Drink',
@@ -164,26 +218,29 @@ class Drinks {
             'high'
         );
     }
-    
+
     /**
      * Afficher la meta box pour les drinks
      */
-    public function render_drink_meta_box($post) {
+    public function render_drink_meta_box($post)
+    {
         wp_nonce_field('drink_meta', 'drink_meta_nonce');
-        
+
         $tagline = get_post_meta($post->ID, '_tagline', true);
         $description_complete = get_post_meta($post->ID, '_description_complete', true);
         $type = get_post_meta($post->ID, '_type', true);
         $volume_ml = get_post_meta($post->ID, '_volume_ml', true);
-        $tasting_notes = $this->get_repeater_field($post->ID, '_tasting_notes');
-        $characteristics = $this->get_repeater_field($post->ID, '_characteristics');
+        $tasting_notes = self::get_repeater_field($post->ID, '_tasting_notes');
+        $characteristics = self::get_repeater_field($post->ID, '_characteristics');
         $note_speciale = get_post_meta($post->ID, '_note_speciale', true);
         $color = get_post_meta($post->ID, '_color', true) ?: '#ddd49a';
-        $image_square = get_post_meta($post->ID, '_image_square', true);
+        $cutout_image = get_post_meta($post->ID, '_cutout_image', true);
         $featured_cocktail_id = get_post_meta($post->ID, '_featured_cocktail_id', true);
-        $cocktails = $this->get_repeater_field($post->ID, '_cocktails');
-        
-        ?>
+        $cocktails = self::get_repeater_field($post->ID, '_cocktails');
+        $_temp_featured_cocktail_slug = get_post_meta($post->ID, '_temp_featured_cocktail_slug', true);
+        $_temp_cocktail_slugs = self::get_repeater_field($post->ID, '_temp_cocktail_slugs');
+
+?>
         <table class="form-table">
             <tr>
                 <th><label for="tagline">Tagline</label></th>
@@ -192,13 +249,13 @@ class Drinks {
             <tr>
                 <th><label for="description_complete">Description complète</label></th>
                 <td>
-                    <?php 
+                    <?php
                     wp_editor($description_complete, 'description_complete', array(
                         'textarea_name' => 'description_complete',
                         'media_buttons' => false,
                         'textarea_rows' => 8,
                         'teeny' => true
-                    )); 
+                    ));
                     ?>
                 </td>
             </tr>
@@ -247,13 +304,13 @@ class Drinks {
             <tr>
                 <th><label for="note_speciale">Note spéciale</label></th>
                 <td>
-                    <?php 
+                    <?php
                     wp_editor($note_speciale, 'note_speciale', array(
                         'textarea_name' => 'note_speciale',
                         'media_buttons' => false,
                         'textarea_rows' => 4,
                         'teeny' => true
-                    )); 
+                    ));
                     ?>
                 </td>
             </tr>
@@ -262,8 +319,8 @@ class Drinks {
                 <td><input type="color" id="color" name="color" value="<?php echo esc_attr($color); ?>" /></td>
             </tr>
             <tr>
-                <th><label for="image_square">Image carrée (URL)</label></th>
-                <td><input type="url" id="image_square" name="image_square" value="<?php echo esc_attr($image_square); ?>" class="regular-text" /></td>
+                <th><label for="cutout_image">Image détourée (URL ou ID)</label></th>
+                <td><input type="text" id="cutout_image" name="cutout_image" value="<?php echo esc_attr($cutout_image); ?>" class="regular-text" /></td>
             </tr>
             <tr>
                 <th><label for="featured_cocktail_id">Cocktail en vedette</label></th>
@@ -280,6 +337,10 @@ class Drinks {
                 </td>
             </tr>
             <tr>
+                <th><label for="_temp_featured_cocktail_slug">Slug cocktail vedette (temp)</label></th>
+                <td><input type="text" id="_temp_featured_cocktail_slug" name="_temp_featured_cocktail_slug" value="<?php echo esc_attr($_temp_featured_cocktail_slug); ?>" class="regular-text" /></td>
+            </tr>
+            <tr>
                 <th><label>Cocktails liés (IDs)</label></th>
                 <td>
                     <div id="cocktails-container">
@@ -293,108 +354,68 @@ class Drinks {
                     <button type="button" class="button add-cocktail">Ajouter un cocktail</button>
                 </td>
             </tr>
+            <tr>
+                <th><label>Slugs cocktails liés (temp)</label></th>
+                <td>
+                    <div id="temp-cocktail-slugs-container">
+                        <?php foreach ($_temp_cocktail_slugs as $i => $slug): ?>
+                            <div class="repeater-item">
+                                <input type="text" name="_temp_cocktail_slugs[]" value="<?php echo esc_attr($slug); ?>" class="regular-text" />
+                                <button type="button" class="button remove-item">Supprimer</button>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <button type="button" class="button add-temp-cocktail-slug">Ajouter un slug</button>
+                </td>
+            </tr>
         </table>
-        
+
         <script>
-        jQuery(document).ready(function($) {
-            $('.add-tasting-note').click(function() {
-                $('#tasting-notes-container').append('<div class="repeater-item"><input type="text" name="tasting_notes[]" value="" class="regular-text" /><button type="button" class="button remove-item">Supprimer</button></div>');
+            jQuery(document).ready(function($) {
+                $('.add-tasting-note').click(function() {
+                    $('#tasting-notes-container').append('<div class="repeater-item"><input type="text" name="tasting_notes[]" value="" class="regular-text" /><button type="button" class="button remove-item">Supprimer</button></div>');
+                });
+                $('.add-characteristic').click(function() {
+                    $('#characteristics-container').append('<div class="repeater-item"><input type="text" name="characteristics[]" value="" class="regular-text" /><button type="button" class="button remove-item">Supprimer</button></div>');
+                });
+                $('.add-cocktail').click(function() {
+                    $('#cocktails-container').append('<div class="repeater-item"><input type="number" name="cocktails[]" value="" class="small-text" min="1" /><button type="button" class="button remove-item">Supprimer</button></div>');
+                });
+                $('.add-temp-cocktail-slug').click(function() {
+                    $('#temp-cocktail-slugs-container').append('<div class="repeater-item"><input type="text" name="_temp_cocktail_slugs[]" value="" class="regular-text" /><button type="button" class="button remove-item">Supprimer</button></div>');
+                });
+                $(document).on('click', '.remove-item', function() {
+                    $(this).parent().remove();
+                });
             });
-            
-            $('.add-characteristic').click(function() {
-                $('#characteristics-container').append('<div class="repeater-item"><input type="text" name="characteristics[]" value="" class="regular-text" /><button type="button" class="button remove-item">Supprimer</button></div>');
-            });
-            
-            $('.add-cocktail').click(function() {
-                $('#cocktails-container').append('<div class="repeater-item"><input type="number" name="cocktails[]" value="" class="small-text" min="1" /><button type="button" class="button remove-item">Supprimer</button></div>');
-            });
-            
-            $(document).on('click', '.remove-item', function() {
-                $(this).parent().remove();
-            });
-        });
         </script>
-        
+
         <style>
-        .repeater-item { margin-bottom: 10px; }
-        .repeater-item input { margin-right: 10px; }
-        </style>
-        <?php
-    }
-    
-    /**
-     * Sauvegarder les meta boxes
-     */
-    public function save_meta_boxes($post_id) {
-        if (get_post_type($post_id) === 'drink') {
-            if (!isset($_POST['drink_meta_nonce']) || !wp_verify_nonce($_POST['drink_meta_nonce'], 'drink_meta')) {
-                return;
+            .repeater-item {
+                margin-bottom: 10px;
             }
-            $this->save_drink_meta($post_id);
-        }
+
+            .repeater-item input {
+                margin-right: 10px;
+            }
+        </style>
+<?php
     }
-    
+
     /**
-     * Sauvegarder les métadonnées d'un drink
+     * Récupérer un champ répéteur - STATIC
      */
-    private function save_drink_meta($post_id) {
-        if (isset($_POST['tagline'])) {
-            update_post_meta($post_id, '_tagline', sanitize_text_field($_POST['tagline']));
-        }
-        
-        if (isset($_POST['description_complete'])) {
-            update_post_meta($post_id, '_description_complete', wp_kses_post($_POST['description_complete']));
-        }
-        
-        if (isset($_POST['type'])) {
-            update_post_meta($post_id, '_type', sanitize_text_field($_POST['type']));
-        }
-        
-        if (isset($_POST['volume_ml'])) {
-            update_post_meta($post_id, '_volume_ml', absint($_POST['volume_ml']));
-        }
-        
-        if (isset($_POST['tasting_notes'])) {
-            $this->update_repeater_field($post_id, '_tasting_notes', $_POST['tasting_notes']);
-        }
-        
-        if (isset($_POST['characteristics'])) {
-            $this->update_repeater_field($post_id, '_characteristics', $_POST['characteristics']);
-        }
-        
-        if (isset($_POST['note_speciale'])) {
-            update_post_meta($post_id, '_note_speciale', wp_kses_post($_POST['note_speciale']));
-        }
-        
-        if (isset($_POST['color'])) {
-            update_post_meta($post_id, '_color', sanitize_hex_color($_POST['color']));
-        }
-        
-        if (isset($_POST['image_square'])) {
-            update_post_meta($post_id, '_image_square', esc_url_raw($_POST['image_square']));
-        }
-        
-        if (isset($_POST['featured_cocktail_id'])) {
-            update_post_meta($post_id, '_featured_cocktail_id', absint($_POST['featured_cocktail_id']));
-        }
-        
-        if (isset($_POST['cocktails'])) {
-            $this->update_cocktails_relation($post_id, $_POST['cocktails']);
-        }
-    }
-    
-    /**
-     * Récupérer un champ répéteur
-     */
-    private function get_repeater_field($post_id, $field_name) {
+    private static function get_repeater_field($post_id, $field_name)
+    {
         $values = get_post_meta($post_id, $field_name, true);
         return is_array($values) ? $values : array();
     }
-    
+
     /**
-     * Mettre à jour un champ répéteur
+     * Mettre à jour un champ répéteur - STATIC
      */
-    private function update_repeater_field($post_id, $field_name, $values) {
+    private static function update_repeater_field($post_id, $field_name, $values)
+    {
         $clean_values = array();
         if (is_array($values)) {
             foreach ($values as $value) {
@@ -406,11 +427,12 @@ class Drinks {
         }
         update_post_meta($post_id, $field_name, $clean_values);
     }
-    
+
     /**
-     * Mettre à jour les relations avec les cocktails
+     * Mettre à jour les relations avec les cocktails - STATIC
      */
-    private function update_cocktails_relation($drink_id, $cocktail_ids) {
+    private static function update_cocktails_relation($drink_id, $cocktail_ids)
+    {
         $clean_ids = array();
         if (is_array($cocktail_ids)) {
             foreach ($cocktail_ids as $id) {

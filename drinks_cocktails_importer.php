@@ -34,6 +34,7 @@ class DCI_Plugin
     private $drinks = null;
     private $editableContents = null;
     private $adminImport = null;
+    private $imageMonitor = null;
 
     /**
      * Obtenir l'instance unique
@@ -59,14 +60,20 @@ class DCI_Plugin
     /**
      * Charger les dépendances
      */
-    private function load_dependencies() {
+    private function load_dependencies()
+    {
         // Charger les post types
         $this->load_post_types();
-        
-        // Charger les classes d'administration
-        if (is_admin()) {
-            $this->load_admin_classes();
+
+
+        // Charger la classe d'import API
+        $api_file = DCI_PLUGIN_DIR . 'includes/class-dci-api.php';
+        if (file_exists($api_file)) {
+            require_once $api_file;
         }
+        // Charger les classes d'administration
+
+        $this->load_admin_classes();
     }
 
     /**
@@ -76,23 +83,24 @@ class DCI_Plugin
     {
         register_activation_hook(__FILE__, [$this, 'activate']);
         register_deactivation_hook(__FILE__, [$this, 'deactivate']);
-        
+
         // Hook pour les styles/scripts admin
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
-        
+
         // Hook pour créer les dossiers nécessaires
         add_action('init', [$this, 'create_plugin_directories']);
     }
-    
+
     /**
      * Initialiser les composants
      */
-    private function init_components() {
+    private function init_components()
+    {
         // Post types
         $this->cocktails = new Cocktails();
         $this->drinks = new Drinks();
         $this->editableContents = new Editable_Content();
-        
+
         // Admin
         if (is_admin()) {
             $this->adminImport = new DCI_Admin_Import();
@@ -113,29 +121,38 @@ class DCI_Plugin
             }
         }
     }
-    
+
     /**
      * Charger les classes d'administration
      */
     public function load_admin_classes()
     {
-        // Charger la classe d'import admin
-        $admin_file = DCI_PLUGIN_DIR . 'admin/class-dci-admin-import.php';
-        if (file_exists($admin_file)) {
-            require_once $admin_file;
-        }
-        
-        // Charger la classe d'importeur si nécessaire
-        $importer_file = DCI_PLUGIN_DIR . 'includes/class-dci-importer.php';
-        if (file_exists($importer_file)) {
-            require_once $importer_file;
+        if (is_admin()) {
+            // Charger la classe d'import admin
+            $admin_file = DCI_PLUGIN_DIR . 'admin/class-dci-admin-import.php';
+            if (file_exists($admin_file)) {
+                require_once $admin_file;
+            }
+
+            // Charger la classe d'importeur si nécessaire
+            $importer_file = DCI_PLUGIN_DIR . 'includes/class-dci-importer.php';
+            if (file_exists($importer_file)) {
+                require_once $importer_file;
+            }
+
+            $imageMonitor_file = DCI_PLUGIN_DIR . 'includes/class-dci-image-monitor.php';
+            if (file_exists($imageMonitor_file)) {
+                require_once $imageMonitor_file;
+                $this->imageMonitor = new DCI_Image_Monitor();
+            }
         }
     }
-    
+
     /**
      * Créer les répertoires nécessaires
      */
-    public function create_plugin_directories() {
+    public function create_plugin_directories()
+    {
         $directories = array(
             DCI_PLUGIN_DIR . 'admin',
             DCI_PLUGIN_DIR . 'includes',
@@ -146,14 +163,14 @@ class DCI_Plugin
             DCI_PLUGIN_DIR . 'languages',
             DCI_PLUGIN_DIR . 'templates'
         );
-        
+
         foreach ($directories as $dir) {
             if (!file_exists($dir)) {
                 wp_mkdir_p($dir);
             }
         }
     }
-    
+
     /**
      * Charger les styles et scripts admin
      */
@@ -175,7 +192,7 @@ class DCI_Plugin
     {
         // Créer les répertoires
         $this->create_plugin_directories();
-        
+
         // Charger les post types
         $this->load_post_types();
 
@@ -184,13 +201,13 @@ class DCI_Plugin
 
         // Version en base de données
         update_option('DCI_version', DCI_VERSION);
-        
+
         // Créer les tables si nécessaire
         $this->create_database_tables();
-        
+
         // Planifier les tâches cron
         $this->schedule_cron_events();
-        
+
         // Log d'activation
         error_log('[DCI] Plugin activé - Version ' . DCI_VERSION);
     }
@@ -202,41 +219,44 @@ class DCI_Plugin
     {
         // Nettoyer les permaliens
         flush_rewrite_rules();
-        
+
         // Supprimer les tâches cron
         $this->unschedule_cron_events();
-        
+
         // Log de désactivation
         error_log('[DCI] Plugin désactivé');
     }
-    
+
     /**
      * Créer les tables de base de données
      */
-    private function create_database_tables() {
+    private function create_database_tables()
+    {
         // Pour l'instant, nous utilisons les post meta
         // Cette méthode est prête pour une future évolution
     }
-    
+
     /**
      * Planifier les événements cron
      */
-    private function schedule_cron_events() {
+    private function schedule_cron_events()
+    {
         // Planifier le nettoyage des logs
         if (!wp_next_scheduled('dci_cleanup_logs')) {
             wp_schedule_event(time(), 'daily', 'dci_cleanup_logs');
         }
-        
+
         // Planifier la vérification des images
         if (!wp_next_scheduled('dci_check_pending_images')) {
             wp_schedule_event(time(), 'hourly', 'dci_check_pending_images');
         }
     }
-    
+
     /**
      * Supprimer les événements cron
      */
-    private function unschedule_cron_events() {
+    private function unschedule_cron_events()
+    {
         wp_clear_scheduled_hook('dci_cleanup_logs');
         wp_clear_scheduled_hook('dci_check_pending_images');
     }

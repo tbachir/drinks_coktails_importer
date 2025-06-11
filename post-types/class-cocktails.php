@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Post Type pour Cocktails - Structure mise à jour
+ * Post Type pour Cocktails - Version fusionnée & statique
  * 
  * @package Inline_Editor_CMS
  * @subpackage PostTypes
@@ -66,7 +67,7 @@ class Cocktails
     {
         register_rest_field('cocktail', 'cocktail_meta', array(
             'get_callback' => array($this, 'get_cocktail_meta'),
-            'update_callback' => array($this, 'update_cocktail_meta'),
+            'update_callback' => array(__CLASS__, 'update_cocktail_meta'),
             'schema' => array(
                 'description' => 'Métadonnées du cocktail',
                 'type' => 'object',
@@ -76,7 +77,8 @@ class Cocktails
                     'ingredients' => array('type' => 'array'),
                     'preparation' => array('type' => 'string'),
                     'variants' => array('type' => 'array'),
-                    'color' => array('type' => 'string')
+                    'color' => array('type' => 'string'),
+                    '_temp_drink_slugs' => array('type' => 'array')
                 )
             )
         ));
@@ -88,40 +90,74 @@ class Cocktails
     public function get_cocktail_meta($post)
     {
         return array(
-            'tagline' => get_post_meta($post['id'], '_tagline', true),
-            'drinks' => $this->get_repeater_field($post['id'], '_drinks'),
-            'ingredients' => $this->get_repeater_field($post['id'], '_ingredients'),
+            'tagline'     => get_post_meta($post['id'], '_tagline', true),
+            'drinks'      => self::get_repeater_field($post['id'], '_drinks'),
+            'ingredients' => self::get_repeater_field($post['id'], '_ingredients'),
             'preparation' => get_post_meta($post['id'], '_preparation', true),
-            'variants' => $this->get_repeater_field($post['id'], '_variants'),
-            'color' => get_post_meta($post['id'], '_color', true) ?: '#C1D4D3'
+            'variants'    => self::get_repeater_field($post['id'], '_variants'),
+            'image' => DCI_API::get_image_url($post['id'], '_image_id', '_image'),
+            'color'       => get_post_meta($post['id'], '_color', true) ?: '#C1D4D3',
+            '_temp_drink_slugs' => self::get_repeater_field($post['id'], '_temp_drink_slugs')
         );
     }
 
     /**
-     * Mettre à jour les métadonnées d'un cocktail
+     * Callback REST pour mettre à jour les métadonnées d'un cocktail
      */
-    public function update_cocktail_meta($value, $post)
+    public static function update_cocktail_meta($value, $post)
     {
-        if (isset($value['tagline'])) {
-            update_post_meta($post->ID, '_tagline', sanitize_text_field($value['tagline']));
-        }
-        if (isset($value['drinks'])) {
-            $this->update_drinks_relation($post->ID, $value['drinks']);
-        }
-        if (isset($value['ingredients'])) {
-            $this->update_repeater_field($post->ID, '_ingredients', $value['ingredients']);
-        }
-        if (isset($value['preparation'])) {
-            update_post_meta($post->ID, '_preparation', wp_kses_post($value['preparation']));
-        }
-        if (isset($value['variants'])) {
-            $this->update_repeater_field($post->ID, '_variants', $value['variants']);
-        }
-        if (isset($value['color'])) {
-            update_post_meta($post->ID, '_color', sanitize_hex_color($value['color']));
-        }
-
+        self::persist_cocktail_meta($post->ID, $value);
         return true;
+    }
+
+    /**
+     * Persistance unique des metas (fusion admin & REST) - STATIC
+     */
+    public static function persist_cocktail_meta($post_id, $data)
+    {
+        if (isset($data['tagline'])) {
+            update_post_meta($post_id, '_tagline', sanitize_text_field($data['tagline']));
+        }
+        if (isset($data['drinks'])) {
+            self::update_drinks_relation($post_id, $data['drinks']);
+        }
+        if (isset($data['ingredients'])) {
+            self::update_repeater_field($post_id, '_ingredients', $data['ingredients']);
+        }
+        if (isset($data['preparation'])) {
+            update_post_meta($post_id, '_preparation', wp_kses_post($data['preparation']));
+        }
+        if (isset($data['variants'])) {
+            self::update_repeater_field($post_id, '_variants', $data['variants']);
+        }
+        if (isset($data['color'])) {
+            update_post_meta($post_id, '_color', sanitize_hex_color($data['color']));
+        }
+        if (isset($data['_temp_drink_slugs']) && is_array($data['_temp_drink_slugs'])) {
+            update_post_meta($post_id, '_temp_drink_slugs', $data['_temp_drink_slugs']);
+        }
+    }
+
+    /**
+     * Sauvegarder les meta boxes (admin)
+     */
+    public function save_meta_boxes($post_id)
+    {
+        if (get_post_type($post_id) === 'cocktail') {
+            if (!isset($_POST['cocktail_meta_nonce']) || !wp_verify_nonce($_POST['cocktail_meta_nonce'], 'cocktail_meta')) {
+                return;
+            }
+            $data = array(
+                'tagline'     => $_POST['tagline'] ?? null,
+                'drinks'      => $_POST['drinks'] ?? null,
+                'ingredients' => $_POST['ingredients'] ?? null,
+                'preparation' => $_POST['preparation'] ?? null,
+                'variants'    => $_POST['variants'] ?? null,
+                'color'       => $_POST['color'] ?? null,
+                '_temp_drink_slugs' => isset($_POST['_temp_drink_slugs']) ? $_POST['_temp_drink_slugs'] : null,
+            );
+            self::persist_cocktail_meta($post_id, $data);
+        }
     }
 
     /**
@@ -146,14 +182,15 @@ class Cocktails
     {
         wp_nonce_field('cocktail_meta', 'cocktail_meta_nonce');
 
-        $tagline = get_post_meta($post->ID, '_tagline', true);
-        $drinks = $this->get_repeater_field($post->ID, '_drinks');
-        $ingredients = $this->get_repeater_field($post->ID, '_ingredients');
+        $tagline     = get_post_meta($post->ID, '_tagline', true);
+        $drinks      = self::get_repeater_field($post->ID, '_drinks');
+        $ingredients = self::get_repeater_field($post->ID, '_ingredients');
         $preparation = get_post_meta($post->ID, '_preparation', true);
-        $variants = $this->get_repeater_field($post->ID, '_variants');
-        $color = get_post_meta($post->ID, '_color', true) ?: '#C1D4D3';
+        $variants    = self::get_repeater_field($post->ID, '_variants');
+        $color       = get_post_meta($post->ID, '_color', true) ?: '#C1D4D3';
+        $temp_drink_slugs = self::get_repeater_field($post->ID, '_temp_drink_slugs');
 
-        ?>
+?>
         <table class="form-table">
             <tr>
                 <th><label for="tagline">Tagline</label></th>
@@ -190,13 +227,13 @@ class Cocktails
             <tr>
                 <th><label for="preparation">Préparation</label></th>
                 <td>
-                    <?php 
+                    <?php
                     wp_editor($preparation, 'preparation', array(
                         'textarea_name' => 'preparation',
                         'media_buttons' => false,
                         'textarea_rows' => 6,
                         'teeny' => true
-                    )); 
+                    ));
                     ?>
                 </td>
             </tr>
@@ -219,6 +256,21 @@ class Cocktails
                 <th><label for="color">Couleur</label></th>
                 <td><input type="color" id="color" name="color" value="<?php echo esc_attr($color); ?>" /></td>
             </tr>
+            <tr>
+                <th><label for="_temp_drink_slugs">Slugs Drinks liés (temp)</label></th>
+                <td>
+                    <div id="temp-drink-slugs-container">
+                        <?php foreach ($temp_drink_slugs as $i => $slug): ?>
+                            <div class="repeater-item">
+                                <input type="text" name="_temp_drink_slugs[]" value="<?php echo esc_attr($slug); ?>" class="regular-text" />
+                                <button type="button" class="button remove-item">Supprimer</button>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <button type="button" class="button add-temp-drink-slug">Ajouter un slug</button>
+                    <p class="description">Utilisé pour la migration/liaison temporaire.</p>
+                </td>
+            </tr>
         </table>
 
         <script>
@@ -233,6 +285,10 @@ class Cocktails
 
                 $('.add-variant').click(function() {
                     $('#variants-container').append('<div class="repeater-item"><input type="text" name="variants[]" value="" class="large-text" /><button type="button" class="button remove-item">Supprimer</button></div>');
+                });
+
+                $('.add-temp-drink-slug').click(function() {
+                    $('#temp-drink-slugs-container').append('<div class="repeater-item"><input type="text" name="_temp_drink_slugs[]" value="" class="regular-text" /><button type="button" class="button remove-item">Supprimer</button></div>');
                 });
 
                 $(document).on('click', '.remove-item', function() {
@@ -250,65 +306,22 @@ class Cocktails
                 margin-right: 10px;
             }
         </style>
-        <?php
+<?php
     }
 
     /**
-     * Sauvegarder les meta boxes
+     * Récupérer un champ répéteur - STATIC
      */
-    public function save_meta_boxes($post_id)
-    {
-        if (get_post_type($post_id) === 'cocktail') {
-            if (!isset($_POST['cocktail_meta_nonce']) || !wp_verify_nonce($_POST['cocktail_meta_nonce'], 'cocktail_meta')) {
-                return;
-            }
-            $this->save_cocktail_meta($post_id);
-        }
-    }
-
-    /**
-     * Sauvegarder les métadonnées d'un cocktail
-     */
-    private function save_cocktail_meta($post_id)
-    {
-        if (isset($_POST['tagline'])) {
-            update_post_meta($post_id, '_tagline', sanitize_text_field($_POST['tagline']));
-        }
-
-        if (isset($_POST['drinks'])) {
-            $this->update_drinks_relation($post_id, $_POST['drinks']);
-        }
-
-        if (isset($_POST['ingredients'])) {
-            $this->update_repeater_field($post_id, '_ingredients', $_POST['ingredients']);
-        }
-
-        if (isset($_POST['preparation'])) {
-            update_post_meta($post_id, '_preparation', wp_kses_post($_POST['preparation']));
-        }
-
-        if (isset($_POST['variants'])) {
-            $this->update_repeater_field($post_id, '_variants', $_POST['variants']);
-        }
-
-        if (isset($_POST['color'])) {
-            update_post_meta($post_id, '_color', sanitize_hex_color($_POST['color']));
-        }
-    }
-
-    /**
-     * Récupérer un champ répéteur
-     */
-    private function get_repeater_field($post_id, $field_name)
+    private static function get_repeater_field($post_id, $field_name)
     {
         $values = get_post_meta($post_id, $field_name, true);
         return is_array($values) ? $values : array();
     }
 
     /**
-     * Mettre à jour un champ répéteur
+     * Mettre à jour un champ répéteur - STATIC
      */
-    private function update_repeater_field($post_id, $field_name, $values)
+    private static function update_repeater_field($post_id, $field_name, $values)
     {
         $clean_values = array();
         if (is_array($values)) {
@@ -323,9 +336,9 @@ class Cocktails
     }
 
     /**
-     * Mettre à jour les relations avec les drinks
+     * Mettre à jour les relations avec les drinks - STATIC
      */
-    private function update_drinks_relation($cocktail_id, $drink_ids)
+    private static function update_drinks_relation($cocktail_id, $drink_ids)
     {
         $clean_ids = array();
         if (is_array($drink_ids)) {
