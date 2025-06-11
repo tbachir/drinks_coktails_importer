@@ -101,7 +101,7 @@ class Drinks
     /**
      * Récupérer les métadonnées d'un drink
      */
-    public function get_drink_meta($post)
+    public static function get_drink_meta($post)
     {
         return array(
             'tagline' => get_post_meta($post['id'], '_tagline', true),
@@ -112,12 +112,10 @@ class Drinks
             'characteristics' => self::get_repeater_field($post['id'], '_characteristics'),
             'note_speciale' => get_post_meta($post['id'], '_note_speciale', true),
             'color' => get_post_meta($post['id'], '_color', true) ?: '#ddd49a',
-            'cutout_image' => DCI_API::get_image_url($post['id'], '_cutout_image_id', '_cutout_image'),
             'image' => DCI_API::get_image_url($post['id'], '_image_id', '_image'),
+            'cutout_image' => DCI_API::get_image_url($post['id'], '_cutout_image_id', '_cutout_image'),
             'featured_cocktail_id' => get_post_meta($post['id'], '_featured_cocktail_id', true),
-            'cocktails' => self::get_repeater_field($post['id'], '_cocktails'),
-            '_temp_featured_cocktail_slug' => get_post_meta($post['id'], '_temp_featured_cocktail_slug', true),
-            '_temp_cocktail_slugs' => self::get_repeater_field($post['id'], '_temp_cocktail_slugs'),
+            'cocktails' => self::get_repeater_field($post['id'], '_cocktails')
         );
     }
 

@@ -78,7 +78,6 @@ class Cocktails
                     'preparation' => array('type' => 'string'),
                     'variants' => array('type' => 'array'),
                     'color' => array('type' => 'string'),
-                    '_temp_drink_slugs' => array('type' => 'array')
                 )
             )
         ));
@@ -87,7 +86,7 @@ class Cocktails
     /**
      * Récupérer les métadonnées d'un cocktail
      */
-    public function get_cocktail_meta($post)
+    public static function get_cocktail_meta($post)
     {
         return array(
             'tagline'     => get_post_meta($post['id'], '_tagline', true),
@@ -97,7 +96,6 @@ class Cocktails
             'variants'    => self::get_repeater_field($post['id'], '_variants'),
             'image' => DCI_API::get_image_url($post['id'], '_image_id', '_image'),
             'color'       => get_post_meta($post['id'], '_color', true) ?: '#C1D4D3',
-            '_temp_drink_slugs' => self::get_repeater_field($post['id'], '_temp_drink_slugs')
         );
     }
 
