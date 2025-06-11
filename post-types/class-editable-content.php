@@ -107,6 +107,12 @@ class Editable_Content
     public function register_custom_endpoints()
     {
         // GET via context/context_id
+        register_rest_route('api', '/editable-content', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_all_editable_content'),
+            'permission_callback' => '__return_true'
+        ));
+
         register_rest_route('api', '/editable-content/get', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_content_by_context'),
@@ -134,13 +140,44 @@ class Editable_Content
         $last_revision_id = count($revisions) ? array_key_first($revisions) : 0;
 
         return array(
-            'editable_id' => get_post_meta($post['id'], '_editable_id', true),
             'context' => get_post_meta($post['id'], '_context', true) ?: '/',
             'context_id' => get_post_meta($post['id'], '_context_id', true) ?: 0,
             'content_type' => get_post_meta($post['id'], '_content_type', true) ?: 'text',
             'version' => $last_revision_id
         );
     }
+
+    public function get_all_editable_content($request)
+    {
+        $args = array(
+            'post_type' => 'editable_content',
+            'posts_per_page' => -1, // tout récupérer
+            'post_status' => 'publish', // tu peux ajouter 'any' pour tout (même corbeille/draft)
+            'fields' => 'ids' // pour lister juste les IDs d'abord (optimisation)
+        );
+        $post_ids = get_posts($args);
+
+        $result = array();
+        foreach ($post_ids as $post_id) {
+            $context = get_post_meta($post_id, '_context', true) ?: '/';
+            $context_id = get_post_meta($post_id, '_context_id', true) ?: '';
+            $content = get_post_field('post_content', $post_id);
+
+            // version = dernière révision (même logique que ton code actuel)
+            $revisions = wp_get_post_revisions($post_id);
+            $version = count($revisions) ? array_key_first($revisions) : 0;
+
+            $result[] = array(
+                'context' => $context,
+                'context_id' => $context_id,
+                'version' => $version,
+                'content' => $content
+            );
+        }
+
+        return rest_ensure_response($result);
+    }
+
     /**
      * GET : Récupérer un contenu selon context/context_id
      */
