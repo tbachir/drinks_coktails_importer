@@ -1,13 +1,18 @@
 <?php
 
 /**
- * Post Type pour Drinks - Version fusionnée & statique
+ * Post Type pour Drinks - Version corrigée avec clés unifiées
  * 
  * @package Inline_Editor_CMS
  * @subpackage PostTypes
  */
 
 if (!defined('ABSPATH')) exit;
+
+// S'assurer que les constantes sont disponibles
+if (!class_exists('DCI_Meta_Keys')) {
+    require_once DCI_PLUGIN_DIR . 'includes/class-dci-importer.php';
+}
 
 class Drinks
 {
@@ -17,6 +22,9 @@ class Drinks
         add_action('rest_api_init', array($this, 'register_rest_fields'));
         add_action('add_meta_boxes', array($this, 'add_meta_boxes'));
         add_action('save_post', array($this, 'save_meta_boxes'));
+        
+        // Handler AJAX pour télécharger une image individuelle
+        add_action('wp_ajax_dci_download_single_image', array($this, 'ajax_download_single_image'));
     }
 
     /**
@@ -88,21 +96,29 @@ class Drinks
                     'characteristics' => array('type' => 'array'),
                     'note_speciale' => array('type' => 'string'),
                     'color' => array('type' => 'string'),
+                    'image' => array('type' => 'string'),
                     'cutout_image' => array('type' => 'string'),
                     'featured_cocktail_id' => array('type' => 'integer'),
                     'cocktails' => array('type' => 'array'),
-                    '_temp_featured_cocktail_slug' => array('type' => 'string'),
-                    '_temp_cocktail_slugs' => array('type' => 'array'),
                 )
             )
         ));
     }
 
     /**
-     * Récupérer les métadonnées d'un drink
+     * Récupérer les métadonnées d'un drink - VERSION CORRIGÉE
      */
     public static function get_drink_meta($post)
     {
+        // Utiliser la méthode de DCI_API pour obtenir les URLs des images
+        $image_url = null;
+        $cutout_image_url = null;
+        
+        if (class_exists('DCI_API')) {
+            $image_url = DCI_API::get_image_url($post['id'], DCI_Meta_Keys::DRINK_IMAGE, DCI_Meta_Keys::DRINK_IMAGE_URL);
+            $cutout_image_url = DCI_API::get_image_url($post['id'], DCI_Meta_Keys::DRINK_CUTOUT_IMAGE, DCI_Meta_Keys::DRINK_CUTOUT_IMAGE_URL);
+        }
+        
         return array(
             'tagline' => get_post_meta($post['id'], '_tagline', true),
             'description_short' => get_post_meta($post['id'], '_description_short', true),
@@ -112,8 +128,8 @@ class Drinks
             'characteristics' => self::get_repeater_field($post['id'], '_characteristics'),
             'note_speciale' => get_post_meta($post['id'], '_note_speciale', true),
             'color' => get_post_meta($post['id'], '_color', true) ?: '#ddd49a',
-            'image' => DCI_API::get_image_url($post['id'], '_image_id', '_image'),
-            'cutout_image' => DCI_API::get_image_url($post['id'], '_cutout_image_id', '_cutout_image'),
+            'image' => $image_url,
+            'cutout_image' => $cutout_image_url,
             'featured_cocktail_id' => get_post_meta($post['id'], '_featured_cocktail_id', true),
             'cocktails' => self::get_repeater_field($post['id'], '_cocktails')
         );
@@ -129,7 +145,7 @@ class Drinks
     }
 
     /**
-     * Persistance unique des metas (fusion admin & REST) - STATIC
+     * Persistance unique des metas - VERSION CORRIGÉE
      */
     public static function persist_drink_meta($post_id, $data)
     {
@@ -157,9 +173,15 @@ class Drinks
         if (isset($data['color'])) {
             update_post_meta($post_id, '_color', sanitize_hex_color($data['color']));
         }
-        if (isset($data['cutout_image'])) {
-            update_post_meta($post_id, '_cutout_image', esc_url_raw($data['cutout_image']));
+        
+        // Gestion des images - Sauvegarder temporairement les URLs si présentes
+        if (isset($data['image']) && filter_var($data['image'], FILTER_VALIDATE_URL)) {
+            update_post_meta($post_id, DCI_Meta_Keys::DRINK_IMAGE_URL, esc_url_raw($data['image']));
         }
+        if (isset($data['cutout_image']) && filter_var($data['cutout_image'], FILTER_VALIDATE_URL)) {
+            update_post_meta($post_id, DCI_Meta_Keys::DRINK_CUTOUT_IMAGE_URL, esc_url_raw($data['cutout_image']));
+        }
+        
         if (isset($data['featured_cocktail_id'])) {
             update_post_meta($post_id, '_featured_cocktail_id', absint($data['featured_cocktail_id']));
         }
@@ -172,6 +194,61 @@ class Drinks
         if (isset($data['_temp_cocktail_slugs']) && is_array($data['_temp_cocktail_slugs'])) {
             update_post_meta($post_id, '_temp_cocktail_slugs', $data['_temp_cocktail_slugs']);
         }
+    }
+
+    /**
+     * Handler AJAX pour télécharger une image individuelle
+     */
+    public function ajax_download_single_image()
+    {
+        // Vérifier le nonce
+        if (!check_ajax_referer('dci_download_image', 'nonce', false)) {
+            wp_send_json_error(array('message' => 'Nonce invalide'));
+        }
+
+        // Vérifier les permissions
+        if (!current_user_can('upload_files')) {
+            wp_send_json_error(array('message' => 'Permissions insuffisantes'));
+        }
+
+        $image_url = isset($_POST['image_url']) ? esc_url_raw($_POST['image_url']) : '';
+        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+        $meta_key = isset($_POST['meta_key']) ? sanitize_key($_POST['meta_key']) : '';
+
+        if (empty($image_url) || empty($post_id) || empty($meta_key)) {
+            wp_send_json_error(array('message' => 'Paramètres manquants'));
+        }
+
+        // Créer une instance de l'importeur
+        require_once DCI_PLUGIN_DIR . 'includes/class-dci-importer.php';
+        $importer = new DCI_Importer();
+
+        // Télécharger l'image
+        $attachment_id = $importer->import_external_image($image_url, $post_id);
+
+        if (is_wp_error($attachment_id)) {
+            wp_send_json_error(array(
+                'message' => $attachment_id->get_error_message()
+            ));
+        }
+
+        // Mettre à jour la meta
+        update_post_meta($post_id, $meta_key, $attachment_id);
+        
+        // Supprimer l'URL temporaire
+        $url_key = str_replace('_id', '_url', $meta_key);
+        delete_post_meta($post_id, $url_key);
+
+        // Si c'est l'image principale, la définir comme image à la une
+        if ($meta_key === DCI_Meta_Keys::DRINK_IMAGE) {
+            set_post_thumbnail($post_id, $attachment_id);
+        }
+
+        wp_send_json_success(array(
+            'message' => 'Image téléchargée avec succès',
+            'attachment_id' => $attachment_id,
+            'url' => wp_get_attachment_url($attachment_id)
+        ));
     }
 
     /**
@@ -192,7 +269,6 @@ class Drinks
                 'characteristics' => $_POST['characteristics'] ?? null,
                 'note_speciale' => $_POST['note_speciale'] ?? null,
                 'color'       => $_POST['color'] ?? null,
-                'cutout_image' => $_POST['cutout_image'] ?? null,
                 'featured_cocktail_id' => $_POST['featured_cocktail_id'] ?? null,
                 '_temp_featured_cocktail_slug' => $_POST['_temp_featured_cocktail_slug'] ?? null,
                 'cocktails' => $_POST['cocktails'] ?? null,
@@ -232,7 +308,6 @@ class Drinks
         $characteristics = self::get_repeater_field($post->ID, '_characteristics');
         $note_speciale = get_post_meta($post->ID, '_note_speciale', true);
         $color = get_post_meta($post->ID, '_color', true) ?: '#ddd49a';
-        $cutout_image = get_post_meta($post->ID, '_cutout_image', true);
         $featured_cocktail_id = get_post_meta($post->ID, '_featured_cocktail_id', true);
         $cocktails = self::get_repeater_field($post->ID, '_cocktails');
         $_temp_featured_cocktail_slug = get_post_meta($post->ID, '_temp_featured_cocktail_slug', true);
@@ -315,10 +390,6 @@ class Drinks
             <tr>
                 <th><label for="color">Couleur</label></th>
                 <td><input type="color" id="color" name="color" value="<?php echo esc_attr($color); ?>" /></td>
-            </tr>
-            <tr>
-                <th><label for="cutout_image">Image détourée (URL ou ID)</label></th>
-                <td><input type="text" id="cutout_image" name="cutout_image" value="<?php echo esc_attr($cutout_image); ?>" class="regular-text" /></td>
             </tr>
             <tr>
                 <th><label for="featured_cocktail_id">Cocktail en vedette</label></th>

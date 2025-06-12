@@ -1,13 +1,18 @@
 <?php
 
 /**
- * Post Type pour Cocktails - Version fusionnée & statique
+ * Post Type pour Cocktails - Version corrigée avec clés unifiées
  * 
  * @package Inline_Editor_CMS
  * @subpackage PostTypes
  */
 
 if (!defined('ABSPATH')) exit;
+
+// S'assurer que les constantes sont disponibles
+if (!class_exists('DCI_Meta_Keys')) {
+    require_once DCI_PLUGIN_DIR . 'includes/class-dci-importer.php';
+}
 
 class Cocktails
 {
@@ -78,23 +83,30 @@ class Cocktails
                     'preparation' => array('type' => 'string'),
                     'variants' => array('type' => 'array'),
                     'color' => array('type' => 'string'),
+                    'image' => array('type' => 'string'),
                 )
             )
         ));
     }
 
     /**
-     * Récupérer les métadonnées d'un cocktail
+     * Récupérer les métadonnées d'un cocktail - VERSION CORRIGÉE
      */
     public static function get_cocktail_meta($post)
     {
+        // Utiliser la méthode de DCI_API pour obtenir l'URL de l'image
+        $image_url = null;
+        if (class_exists('DCI_API')) {
+            $image_url = DCI_API::get_image_url($post['id'], DCI_Meta_Keys::COCKTAIL_IMAGE, DCI_Meta_Keys::COCKTAIL_IMAGE_URL);
+        }
+        
         return array(
             'tagline'     => get_post_meta($post['id'], '_tagline', true),
             'drinks'      => self::get_repeater_field($post['id'], '_drinks'),
             'ingredients' => self::get_repeater_field($post['id'], '_ingredients'),
             'preparation' => get_post_meta($post['id'], '_preparation', true),
             'variants'    => self::get_repeater_field($post['id'], '_variants'),
-            'image' => DCI_API::get_image_url($post['id'], '_image_id', '_image'),
+            'image'       => $image_url,
             'color'       => get_post_meta($post['id'], '_color', true) ?: '#C1D4D3',
         );
     }
@@ -109,7 +121,7 @@ class Cocktails
     }
 
     /**
-     * Persistance unique des metas (fusion admin & REST) - STATIC
+     * Persistance unique des metas - VERSION CORRIGÉE
      */
     public static function persist_cocktail_meta($post_id, $data)
     {
@@ -131,6 +143,12 @@ class Cocktails
         if (isset($data['color'])) {
             update_post_meta($post_id, '_color', sanitize_hex_color($data['color']));
         }
+        
+        // Gestion de l'image - Sauvegarder temporairement l'URL si présente
+        if (isset($data['image']) && filter_var($data['image'], FILTER_VALIDATE_URL)) {
+            update_post_meta($post_id, DCI_Meta_Keys::COCKTAIL_IMAGE_URL, esc_url_raw($data['image']));
+        }
+        
         if (isset($data['_temp_drink_slugs']) && is_array($data['_temp_drink_slugs'])) {
             update_post_meta($post_id, '_temp_drink_slugs', $data['_temp_drink_slugs']);
         }
@@ -171,6 +189,72 @@ class Cocktails
             'normal',
             'high'
         );
+        
+        // Ajouter une meta box pour l'image
+        add_meta_box(
+            'cocktail_image_meta',
+            'Image du Cocktail',
+            array($this, 'render_cocktail_image_meta_box'),
+            'cocktail',
+            'side',
+            'default'
+        );
+    }
+
+    /**
+     * Afficher la meta box pour l'image du cocktail
+     */
+    public function render_cocktail_image_meta_box($post)
+    {
+        $image_id = get_post_meta($post->ID, DCI_Meta_Keys::COCKTAIL_IMAGE, true);
+        $image_url = get_post_meta($post->ID, DCI_Meta_Keys::COCKTAIL_IMAGE_URL, true);
+        ?>
+        <div class="cocktail-image-meta-box">
+            <?php if ($image_id && wp_attachment_is_image($image_id)) : ?>
+                <img src="<?php echo wp_get_attachment_url($image_id); ?>" style="max-width:100%; height:auto;">
+                <p class="description"><?php _e('Image définie via l\'image à la une', 'inline-editor-cms'); ?></p>
+            <?php elseif ($image_url) : ?>
+                <div class="notice notice-warning inline">
+                    <p><?php _e('Image non téléchargée. URL source :', 'inline-editor-cms'); ?></p>
+                    <p><code><?php echo esc_url($image_url); ?></code></p>
+                    <button class="button download-cocktail-image" 
+                            data-url="<?php echo esc_attr($image_url); ?>"
+                            data-post-id="<?php echo esc_attr($post->ID); ?>">
+                        <?php _e('Télécharger maintenant', 'inline-editor-cms'); ?>
+                    </button>
+                </div>
+            <?php else : ?>
+                <p class="description"><?php _e('Utilisez l\'image à la une pour définir l\'image du cocktail', 'inline-editor-cms'); ?></p>
+            <?php endif; ?>
+        </div>
+        
+        <script>
+        jQuery(document).ready(function($) {
+            $('.download-cocktail-image').on('click', function(e) {
+                e.preventDefault();
+                var button = $(this);
+                var originalText = button.text();
+                
+                button.prop('disabled', true).text('Téléchargement...');
+                
+                jQuery.post(ajaxurl, {
+                    action: 'dci_download_single_image',
+                    nonce: '<?php echo wp_create_nonce('dci_download_image'); ?>',
+                    image_url: button.data('url'),
+                    post_id: button.data('post-id'),
+                    meta_key: '<?php echo DCI_Meta_Keys::COCKTAIL_IMAGE; ?>'
+                }, function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Erreur: ' + response.data.message);
+                        button.prop('disabled', false).text(originalText);
+                    }
+                });
+            });
+        });
+        </script>
+        <?php
     }
 
     /**
@@ -201,6 +285,12 @@ class Cocktails
                         <?php foreach ($drinks as $i => $drink_id): ?>
                             <div class="repeater-item">
                                 <input type="number" name="drinks[]" value="<?php echo esc_attr($drink_id); ?>" class="small-text" min="1" />
+                                <?php 
+                                $drink_title = get_the_title($drink_id);
+                                if ($drink_title) {
+                                    echo '<span class="description">' . esc_html($drink_title) . '</span>';
+                                }
+                                ?>
                                 <button type="button" class="button remove-item">Supprimer</button>
                             </div>
                         <?php endforeach; ?>
@@ -254,6 +344,7 @@ class Cocktails
                 <th><label for="color">Couleur</label></th>
                 <td><input type="color" id="color" name="color" value="<?php echo esc_attr($color); ?>" /></td>
             </tr>
+            <?php if (!empty($temp_drink_slugs)) : ?>
             <tr>
                 <th><label for="_temp_drink_slugs">Slugs Drinks liés (temp)</label></th>
                 <td>
@@ -265,10 +356,10 @@ class Cocktails
                             </div>
                         <?php endforeach; ?>
                     </div>
-                    <button type="button" class="button add-temp-drink-slug">Ajouter un slug</button>
-                    <p class="description">Utilisé pour la migration/liaison temporaire.</p>
+                    <p class="description notice notice-warning inline">Ces slugs temporaires doivent être résolus via l'import.</p>
                 </td>
             </tr>
+            <?php endif; ?>
         </table>
 
         <script>
@@ -285,10 +376,6 @@ class Cocktails
                     $('#variants-container').append('<div class="repeater-item"><input type="text" name="variants[]" value="" class="large-text" /><button type="button" class="button remove-item">Supprimer</button></div>');
                 });
 
-                $('.add-temp-drink-slug').click(function() {
-                    $('#temp-drink-slugs-container').append('<div class="repeater-item"><input type="text" name="_temp_drink_slugs[]" value="" class="regular-text" /><button type="button" class="button remove-item">Supprimer</button></div>');
-                });
-
                 $(document).on('click', '.remove-item', function() {
                     $(this).parent().remove();
                 });
@@ -298,10 +385,23 @@ class Cocktails
         <style>
             .repeater-item {
                 margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
             }
 
             .repeater-item input {
                 margin-right: 10px;
+            }
+            
+            .repeater-item .description {
+                color: #666;
+                font-style: italic;
+            }
+            
+            .cocktail-image-meta-box img {
+                border-radius: 4px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             }
         </style>
 <?php

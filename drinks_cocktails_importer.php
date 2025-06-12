@@ -141,6 +141,10 @@ class DCI_Plugin
             if (file_exists($importer_file)) {
                 require_once $importer_file;
             }
+            $migration_file = DCI_PLUGIN_DIR . 'admin/class-dci-admin-migration.php';
+            if (file_exists($migration_file)) {
+                require_once $migration_file;
+            }
         }
     }
 
