@@ -1,0 +1,27 @@
+.drink-meta-box {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.drink-meta-box label {
+    font-weight: bold;
+}
+
+.upload-image-button {
+    margin-top: 5px;
+}
+
+.image-preview {
+    margin-top: 10px;
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    border: 1px dashed #ddd;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f9f9f9;
+}

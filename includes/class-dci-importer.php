@@ -140,7 +140,7 @@ class DCI_Importer
         $existing = get_posts(array(
             'post_type' => 'drink',
             'name' => $slug,
-            'posts_per_page' => 1
+            'potss_per_page' => 1
         ));
 
         if (!empty($existing)) {

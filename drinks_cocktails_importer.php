@@ -104,6 +104,8 @@ class DCI_Plugin
         // Admin
         if (is_admin()) {
             $this->adminImport = new DCI_Admin_Import();
+            include_once plugin_dir_path(__FILE__) . 'includes/admin/class-drink-meta-box.php';
+            new Drink_Meta_Box();
         }
     }
 

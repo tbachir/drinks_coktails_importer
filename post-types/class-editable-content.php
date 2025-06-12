@@ -18,6 +18,7 @@ class Editable_Content
         add_action('rest_api_init', array($this, 'register_rest_fields'));
         add_action('rest_api_init', array($this, 'register_custom_endpoints'));
         add_filter('jwt_auth_whitelist', array($this, 'whitelist_endpoints'));
+       
     }
 
     public function whitelist_endpoints($endpoints)
@@ -366,8 +367,14 @@ class Editable_Content
                 update_post_meta($post_id, '_editable_id', $editable_id);
             }
 
-            error_log(sprintf('[Inline-Editor-CMS] Content updated: %s/%s (v%d->v%d) by user %d', 
-                $context, $context_id, $current_version, $new_version, get_current_user_id()));
+            error_log(sprintf(
+                '[Inline-Editor-CMS] Content updated: %s/%s (v%d->v%d) by user %d',
+                $context,
+                $context_id,
+                $current_version,
+                $new_version,
+                get_current_user_id()
+            ));
 
             return rest_ensure_response(array(
                 'status' => 'success',
@@ -401,7 +408,7 @@ class Editable_Content
 
         // Générer un editable_id unique
         $editable_id = $this->generate_editable_id($post_id);
-        
+
         // Sauvegarder les métadonnées
         update_post_meta($post_id, '_editable_id', $editable_id);
         update_post_meta($post_id, '_context', $context);
@@ -409,8 +416,12 @@ class Editable_Content
         update_post_meta($post_id, '_content_type', $content_type);
         update_post_meta($post_id, '_version', 1);
 
-        error_log(sprintf('[Inline-Editor-CMS] Content created: %s/%s by user %d', 
-            $context, $context_id, get_current_user_id()));
+        error_log(sprintf(
+            '[Inline-Editor-CMS] Content created: %s/%s by user %d',
+            $context,
+            $context_id,
+            get_current_user_id()
+        ));
 
         return rest_ensure_response(array(
             'status' => 'success',
