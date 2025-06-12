@@ -4,7 +4,7 @@
  * Plugin Name: Drinks & Cocktails - Import & CPT
  * Plugin URI: https://drinks_cocktails_importer.com
  * Description: Crée les CPT Drink/Cocktail, leurs metas, permet l'import JSON (relations par slugs), téléchargement différé des images, et expose tout dans l'API REST. Logging via error_log (WordPress).
- * Version: 1.1.0
+ * Version: 1.4.0
  * Author: Tarek Bachir
  * Text Domain: drinks-cocktails-import-cpt
  * Domain Path: /languages
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Constantes du plugin
-define('DCI_VERSION', '1.1.0');
+define('DCI_VERSION', '1.4.0');
 define('DCI_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('DCI_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -25,16 +25,10 @@ define('DCI_PLUGIN_URL', plugin_dir_url(__FILE__));
  */
 class DCI_Plugin
 {
-
     /**
      * Instance unique du plugin
      */
     private static $instance = null;
-    private $cocktails = null;
-    private $drinks = null;
-    private $editableContents = null;
-    private $adminImport = null;
-    private $imageMonitor = null;
 
     /**
      * Obtenir l'instance unique
@@ -54,7 +48,6 @@ class DCI_Plugin
     {
         $this->load_dependencies();
         $this->init_hooks();
-        $this->init_components();
     }
 
     /**
@@ -62,18 +55,57 @@ class DCI_Plugin
      */
     private function load_dependencies()
     {
+        // Charger les classes principales d'abord
+        require_once DCI_PLUGIN_DIR . 'includes/class-dci-importer.php';
+        require_once DCI_PLUGIN_DIR . 'includes/class-dci-api.php';
+        
         // Charger les post types
         $this->load_post_types();
-
-
-        // Charger la classe d'import API
-        $api_file = DCI_PLUGIN_DIR . 'includes/class-dci-api.php';
-        if (file_exists($api_file)) {
-            require_once $api_file;
-        }
+        
         // Charger les classes d'administration
+        if (is_admin()) {
+            $this->load_admin_classes();
+        }
+    }
 
-        $this->load_admin_classes();
+    /**
+     * Charger les post types
+     */
+    private function load_post_types()
+    {
+        $post_types_files = array(
+            'class-drinks.php',
+            'class-cocktails.php',
+            'class-editable-content.php'
+        );
+        
+        foreach ($post_types_files as $file) {
+            $file_path = DCI_PLUGIN_DIR . 'post-types/' . $file;
+            if (file_exists($file_path)) {
+                require_once $file_path;
+            }
+        }
+    }
+
+    /**
+     * Charger les classes d'administration
+     */
+    private function load_admin_classes()
+    {
+        // Charger l'interface d'import
+        require_once DCI_PLUGIN_DIR . 'admin/class-dci-admin-import.php';
+        
+        // Charger la page de migration
+        $migration_file = DCI_PLUGIN_DIR . 'admin/class-dci-admin-migration.php';
+        if (file_exists($migration_file)) {
+            require_once $migration_file;
+        }
+        
+        // Charger la meta box des drinks
+        $meta_box_file = DCI_PLUGIN_DIR . 'includes/admin/class-drink-meta-box.php';
+        if (file_exists($meta_box_file)) {
+            require_once $meta_box_file;
+        }
     }
 
     /**
@@ -92,63 +124,6 @@ class DCI_Plugin
     }
 
     /**
-     * Initialiser les composants
-     */
-    private function init_components()
-    {
-        // Post types
-        $this->cocktails = new Cocktails();
-        $this->drinks = new Drinks();
-        $this->editableContents = new Editable_Content();
-
-        // Admin
-        if (is_admin()) {
-            $this->adminImport = new DCI_Admin_Import();
-            include_once plugin_dir_path(__FILE__) . 'includes/admin/class-drink-meta-box.php';
-            new Drink_Meta_Box();
-        }
-    }
-
-    /**
-     * Charger les post types
-     */
-    public function load_post_types()
-    {
-        // Charger automatiquement tous les fichiers dans post-types/
-        $post_types_dir = DCI_PLUGIN_DIR . 'post-types/';
-
-        if (is_dir($post_types_dir)) {
-            foreach (glob($post_types_dir . '*.php') as $file) {
-                require_once $file;
-            }
-        }
-    }
-
-    /**
-     * Charger les classes d'administration
-     */
-    public function load_admin_classes()
-    {
-        if (is_admin()) {
-            // Charger la classe d'import admin
-            $admin_file = DCI_PLUGIN_DIR . 'admin/class-dci-admin-import.php';
-            if (file_exists($admin_file)) {
-                require_once $admin_file;
-            }
-
-            // Charger la classe d'importeur si nécessaire
-            $importer_file = DCI_PLUGIN_DIR . 'includes/class-dci-importer.php';
-            if (file_exists($importer_file)) {
-                require_once $importer_file;
-            }
-            $migration_file = DCI_PLUGIN_DIR . 'admin/class-dci-admin-migration.php';
-            if (file_exists($migration_file)) {
-                require_once $migration_file;
-            }
-        }
-    }
-
-    /**
      * Créer les répertoires nécessaires
      */
     public function create_plugin_directories()
@@ -156,12 +131,18 @@ class DCI_Plugin
         $directories = array(
             DCI_PLUGIN_DIR . 'admin',
             DCI_PLUGIN_DIR . 'includes',
+            DCI_PLUGIN_DIR . 'includes/admin',
+            DCI_PLUGIN_DIR . 'includes/admin/assets',
+            DCI_PLUGIN_DIR . 'includes/admin/assets/css',
+            DCI_PLUGIN_DIR . 'includes/admin/assets/js',
             DCI_PLUGIN_DIR . 'assets',
             DCI_PLUGIN_DIR . 'assets/css',
             DCI_PLUGIN_DIR . 'assets/js',
             DCI_PLUGIN_DIR . 'assets/images',
             DCI_PLUGIN_DIR . 'languages',
-            DCI_PLUGIN_DIR . 'templates'
+            DCI_PLUGIN_DIR . 'templates',
+            DCI_PLUGIN_DIR . 'post-types',
+            DCI_PLUGIN_DIR . 'post-types/data'
         );
 
         foreach ($directories as $dir) {
@@ -193,17 +174,14 @@ class DCI_Plugin
         // Créer les répertoires
         $this->create_plugin_directories();
 
-        // Charger les post types
-        $this->load_post_types();
+        // Charger les dépendances pour l'activation
+        $this->load_dependencies();
 
         // Rafraîchir les permaliens
         flush_rewrite_rules();
 
         // Version en base de données
         update_option('DCI_version', DCI_VERSION);
-
-        // Créer les tables si nécessaire
-        $this->create_database_tables();
 
         // Planifier les tâches cron
         $this->schedule_cron_events();
@@ -225,15 +203,6 @@ class DCI_Plugin
 
         // Log de désactivation
         error_log('[DCI] Plugin désactivé');
-    }
-
-    /**
-     * Créer les tables de base de données
-     */
-    private function create_database_tables()
-    {
-        // Pour l'instant, nous utilisons les post meta
-        // Cette méthode est prête pour une future évolution
     }
 
     /**
