@@ -415,3 +415,5 @@ class DCI_Admin_Import {
         wp_send_json_success($status);
     }
 }
+
+new DCI_Admin_Import();

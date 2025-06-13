@@ -6,8 +6,6 @@
  * Description: Crée les CPT Drink/Cocktail, leurs metas, permet l'import JSON (relations par slugs), téléchargement différé des images, et expose tout dans l'API REST. Logging via error_log (WordPress).
  * Version: 1.4.0
  * Author: Tarek Bachir
- * Text Domain: drinks-cocktails-import-cpt
- * Domain Path: /languages
  */
 
 // Sécurité : empêcher l'accès direct
@@ -119,38 +117,8 @@ class DCI_Plugin
         // Hook pour les styles/scripts admin
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
 
-        // Hook pour créer les dossiers nécessaires
-        add_action('init', [$this, 'create_plugin_directories']);
     }
 
-    /**
-     * Créer les répertoires nécessaires
-     */
-    public function create_plugin_directories()
-    {
-        $directories = array(
-            DCI_PLUGIN_DIR . 'admin',
-            DCI_PLUGIN_DIR . 'includes',
-            DCI_PLUGIN_DIR . 'includes/admin',
-            DCI_PLUGIN_DIR . 'includes/admin/assets',
-            DCI_PLUGIN_DIR . 'includes/admin/assets/css',
-            DCI_PLUGIN_DIR . 'includes/admin/assets/js',
-            DCI_PLUGIN_DIR . 'assets',
-            DCI_PLUGIN_DIR . 'assets/css',
-            DCI_PLUGIN_DIR . 'assets/js',
-            DCI_PLUGIN_DIR . 'assets/images',
-            DCI_PLUGIN_DIR . 'languages',
-            DCI_PLUGIN_DIR . 'templates',
-            DCI_PLUGIN_DIR . 'post-types',
-            DCI_PLUGIN_DIR . 'post-types/data'
-        );
-
-        foreach ($directories as $dir) {
-            if (!file_exists($dir)) {
-                wp_mkdir_p($dir);
-            }
-        }
-    }
 
     /**
      * Charger les styles et scripts admin
@@ -171,9 +139,6 @@ class DCI_Plugin
      */
     public function activate()
     {
-        // Créer les répertoires
-        $this->create_plugin_directories();
-
         // Charger les dépendances pour l'activation
         $this->load_dependencies();
 

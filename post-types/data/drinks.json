@@ -17,8 +17,8 @@
       ],
       "note_speciale": "Type de gin idéal :<br>herbacés<br>citronné<br>floral",
       "color": "#ddd49a",
-      "cutout_image": "https://cdn.mimeit.com/images/products/Tonic Water.png",
-      "image": "https://cdn.mimeit.com/images/products/Tonic Water_square.png",
+      "cutout_image": "https://cdn.mimeit.com/images/products/TonicWater.png",
+      "image": "https://cdn.mimeit.com/images/products/TonicWater_square.png",
       "_temp_featured_cocktail_slug": "gin-tonic",
       "_temp_cocktail_slugs": ["gin-tonic", "gin-noir", "tonka-tonic"]
     },
@@ -39,8 +39,8 @@
       ],
       "note_speciale": "Type de gin idéal :<br>herbacés<br>citronné<br>sec",
       "color": "#9cbe93",
-      "cutout_image": "https://cdn.mimeit.com/images/products/Tonic Concombre.png",
-      "image": "https://cdn.mimeit.com/images/products/Tonic Concombre_square.png",
+      "cutout_image": "https://cdn.mimeit.com/images/products/TonicConcombre.png",
+      "image": "https://cdn.mimeit.com/images/products/TonicConcombre_square.png",
       "_temp_featured_cocktail_slug": "concombre-collins",
       "_temp_cocktail_slugs": ["concombre-collins", "mule"]
     },
@@ -61,8 +61,8 @@
       ],
       "note_speciale": "Type de gin idéal :<br>herbacés<br>citronné",
       "color": "#4bb090",
-      "cutout_image": "https://cdn.mimeit.com/images/products/Tonic Romarin.png",
-      "image": "https://cdn.mimeit.com/images/products/Tonic Romarin_square.png",
+      "cutout_image": "https://cdn.mimeit.com/images/products/TonicRomarin.png",
+      "image": "https://cdn.mimeit.com/images/products/TonicRomarin_square.png",
       "_temp_featured_cocktail_slug": "romapolitan",
       "_temp_cocktail_slugs": ["emerald-garden", "romapolitan", "citrus-twist"]
     },
@@ -78,8 +78,8 @@
       "characteristics": ["Faible en calories", "Sans conservateurs", "200 ml"],
       "note_speciale": "Idéal sur glace<br>ou<br>en cocktails",
       "color": "#f59eb5",
-      "cutout_image": "https://cdn.mimeit.com/images/products/Soda Jasmin.png",
-      "image": "https://cdn.mimeit.com/images/products/Soda Jasmin_square.png",
+      "cutout_image": "https://cdn.mimeit.com/images/products/SodaJasmin.png",
+      "image": "https://cdn.mimeit.com/images/products/SodaJasmin_square.png",
       "_temp_featured_cocktail_slug": "jasmin",
       "_temp_cocktail_slugs": ["jasmin", "rose-sauvage"]
     },
@@ -95,8 +95,8 @@
       "characteristics": ["Faible en calories", "Sans conservateurs", "200 ml"],
       "note_speciale": "Idéal sur glace<br>ou<br>en cocktails",
       "color": "#f27778",
-      "cutout_image": "https://cdn.mimeit.com/images/products/Soda Pamplemousse.png",
-      "image": "https://cdn.mimeit.com/images/products/Soda Pamplemousse_square.png",
+      "cutout_image": "https://cdn.mimeit.com/images/products/SodaPamplemousse.png",
+      "image": "https://cdn.mimeit.com/images/products/SodaPamplemousse_square.png",
       "_temp_featured_cocktail_slug": "paloma",
       "_temp_cocktail_slugs": ["paloma"]
     },
@@ -112,8 +112,8 @@
       "characteristics": ["Gingembre frais", "Sans conservateurs", "200 ml"],
       "note_speciale": "Idéal sur glace<br>ou<br>en cocktails",
       "color": "#a36f2a",
-      "cutout_image": "https://cdn.mimeit.com/images/products/Ginger Beer.png",
-      "image": "https://cdn.mimeit.com/images/products/Ginger Beer_square.png",
+      "cutout_image": "https://cdn.mimeit.com/images/products/GingerBeer.png",
+      "image": "https://cdn.mimeit.com/images/products/GingerBeer_square.png",
       "_temp_featured_cocktail_slug": "mule",
       "_temp_cocktail_slugs": ["mule"]
     }

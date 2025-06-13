@@ -445,3 +445,6 @@ class Editable_Content
         return 'editable_' . $post_id . '_' . uniqid();
     }
 }
+
+
+new Editable_Content();
